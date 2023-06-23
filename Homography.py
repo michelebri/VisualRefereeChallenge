@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-class Homography():
+class Homography:
 
     def __init__(self):
         self.H = []
@@ -13,7 +13,7 @@ class Homography():
     def set_H(self, H):
         self.H = H
 
-    def normalize_points(self,points_virtual_pitch, points_real_pitch):
+    def normalize_points(self, points_virtual_pitch, points_real_pitch):
 
         def get_normalization_matrix(pts, name="A"):
             pts = np.array(pts).astype(np.float64)
@@ -22,7 +22,8 @@ class Homography():
 
             s_x, s_y = np.sqrt(2 / var_x), np.sqrt(2 / var_y)
 
-            #print("Matrix: {4} : meanx {0}, meany {1}, varx {2}, vary {3}, sx {5}, sy {6} ".format(x_mean, y_mean, var_x,var_y, name, s_x, s_y))
+            # print("Matrix: {4} : meanx {0}, meany {1}, varx {2}, vary {3}, sx {5}, sy {6} " \
+            # .format(x_mean, y_mean, var_x,var_y, name, s_x, s_y))
 
             n = np.array([[s_x, 0, -s_x * x_mean], [0, s_y, -s_y * y_mean], [0, 0, 1]])
             # print(n)
@@ -45,8 +46,8 @@ class Homography():
         normalized_hom_imp = hom_imp
         normalized_hom_objp = hom_objp
 
-        #print("Numero punti campo reale: " + str(normalized_hom_objp.shape[0]))
-        #print("Numero punti campo virtuale: " + str(normalized_hom_imp.shape[0]))
+        # print("Numero punti campo reale: " + str(normalized_hom_objp.shape[0]))
+        # print("Numero punti campo virtuale: " + str(normalized_hom_imp.shape[0]))
         for i in range(normalized_hom_objp.shape[0]):
             # 54 points. iterate one by one
             # all points are homogeneous
@@ -68,7 +69,7 @@ class Homography():
 
         return ret_correspondences
 
-                 
+
     def _compute_view_based_homography(self, correspondence, reproj=True):
         image_points = correspondence[0]
         object_points = correspondence[1]
@@ -80,16 +81,16 @@ class Homography():
         N_x_inv = correspondence[7]
 
         N = len(image_points)
-        #print("Number of points in current view : ", N)
+        # print("Number of points in current view : ", N)
 
         M = np.zeros((2 * N, 9), dtype=np.float64)
-        #print("Shape of Matrix M : ", M.shape)
+        # print("Shape of Matrix M : ", M.shape)
 
-        #print("N_model\n", N_x)
-        #print("N_observed\n", N_u)
+        # print("N_model\n", N_x)
+        # print("N_observed\n", N_u)
 
         # create row wise allotment for each 0-2i rows
-        # that means 2 rows..
+        # that means 2 rows
         for i in range(N):
             X, Y = normalized_object_points[i]  # A
             u, v = normalized_image_points[i]  # B
@@ -99,11 +100,11 @@ class Homography():
             M[2 * i] = row_1
             M[(2 * i) + 1] = row_2
 
-            #print("p_model {0} \t p_obs {1}".format((X, Y), (u, v)))
+            # print("p_model {0} \t p_obs {1}".format((X, Y), (u, v)))
 
         # M.h  = 0 . solve system of linear equations using SVD
         u, s, vh = np.linalg.svd(M)
-        #print("Computing SVD of M")
+        # print("Computing SVD of M")
         # print("U : Shape {0} : {1}".format(u.shape, u))
         # print("S : Shape {0} : {1}".format(s.shape, s))
         # print("V_t : Shape {0} : {1}".format(vh.shape, vh))
@@ -112,15 +113,15 @@ class Homography():
         h_norm = vh[np.argmin(s)]
         h_norm = h_norm.reshape(3, 3)
         # print("Normalized Homography Matrix : \n" , h_norm)
-        #print(N_u_inv)
-        #print(N_x)
+        # print(N_u_inv)
+        # print(N_x)
         # h = h_norm
         h = np.matmul(np.matmul(N_u_inv, h_norm), N_x)
 
         # if abs(h[2, 2]) > 10e-8:
         h = h[:, :] / h[2, 2]
 
-        #print("Homography for View : \n", h)
+        # print("Homography for View : \n", h)
 
         if reproj:
             reproj_error = 0
@@ -129,7 +130,7 @@ class Homography():
                 t = np.matmul(h, t1).reshape(1, 3)
                 t = t / t[0][-1]
                 formatstring = "Imp {0} | ObjP {1} | Tx {2}".format(image_points[i], object_points[i], t)
-                #print(formatstring)
+                # print(formatstring)
                 reproj_error += np.sum(np.abs(image_points[i] - t[0][:-1]))
             reproj_error = np.sqrt(reproj_error / N) / 100.0
             print("Reprojection error : ", reproj_error)
