@@ -5,7 +5,7 @@ import tensorflow as tf
 class Detection():
 
 	def __init__(self,size):
-		self.interpreter = tf.lite.Interpreter(model_path="model.tflite")
+		self.interpreter = tf.lite.Interpreter(model_path="model/model.tflite")
 		self.interpreter.allocate_tensors()
 		self.input_details = self.interpreter.get_input_details()
 		self.input_size = size

@@ -10,7 +10,7 @@ h = Homography()
 dst_point = {0:[158,43] , 6: [98,110], 5:[235,109] , 11: [120,296] , 12:[213,301]}
 movenet_point = []
 virtual_point = []
-dst = cv2.imread("skeleton_2d.jpg")
+dst = cv2.imread("model/skeleton_2d.jpg")
 dst_h, dst_w,_ = dst.shape;
 cap = cv2.VideoCapture(0)
 
