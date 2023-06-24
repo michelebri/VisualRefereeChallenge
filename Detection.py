@@ -16,12 +16,11 @@ class Detection:
         """
            exclude eyes ear knee ankle
         """
-        return key_id != 1 and key_id != 3 and key_id != 2 and key_id != 4 \
+        return key_id != 1 and key_id != 2 and key_id != 3 and key_id != 4 \
             and key_id != 13 and key_id != 14 \
             and key_id != 15 and key_id != 16
 
     def get_keypoints(self, keypoints_with_scores, width, height, threshold):
-        keypoints_all = []
         key_id = 0
         keypoint_dict = {}
         num_instances, _, _, _ = keypoints_with_scores.shape
@@ -29,8 +28,7 @@ class Detection:
             kpts_x = keypoints_with_scores[0, idx, :, 1]
             kpts_y = keypoints_with_scores[0, idx, :, 0]
             kpts_scores = keypoints_with_scores[0, idx, :, 2]
-            kpts_absolute_xy = np.stack(
-                [width * np.array(kpts_x), height * np.array(kpts_y)], axis=-1)
+            kpts_absolute_xy = np.stack([width * np.array(kpts_x), height * np.array(kpts_y)], axis=-1)
             for value in kpts_absolute_xy:
                 if (kpts_scores[key_id] > threshold) and self.excludeKeypoint(key_id):
                     keypoint_dict[key_id] = value
