@@ -37,7 +37,7 @@ while ret:
     # SEGMENTATION E CROPPING
     cropped_image = segmentation_and_cropping(image, full_mask)
     # NORMALIZATION
-    normalized_image = cv2.normalize(cropped_image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+    normalized_image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
     # EQUALIZATION
     equalized_image = equalizing(normalized_image)
     # SQUARING

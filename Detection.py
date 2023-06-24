@@ -39,6 +39,9 @@ class Detection:
 
         height, width, channels = image.shape
         keypoint_dict = self.get_keypoints(keypoints_with_scores, width, height, threshold)
+        # Test con sfondo nero
+        # (192 x 192 x 3) shape immagine di partenza
+        image = np.zeros((192, 192, 3), dtype=np.uint8)
         for key in keypoint_dict.keys():
             centro = (int(keypoint_dict[key][0]), int(keypoint_dict[key][1]))
             image = cv2.circle(image, centro, 1, (255, 0, 0), 2)
