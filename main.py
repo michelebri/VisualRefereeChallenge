@@ -16,11 +16,12 @@ from PIL import Image
 # 13: 'left_knee',      14: 'right_knee',
 # 15: 'left_ankle',     16: 'right_ankle'
 
-# dst_point = {0: [160, 42], 1: [171, 31], 2: [145, 31], 3: [194, 34], 4: [121, 34], 5: [235, 111], 6: [93, 111],
-#              7: [260, 201], 8: [70, 201], 9: [273, 290], 10: [54, 290], 11: [211, 301], 12: [120, 301],
-#              13: [202, 425], 14: [107, 425], 15: [198, 529], 16: [103, 529]}
+# dst_point = {0: [410, 292], 1: [422, 281], 2: [396, 281], 3: [444, 287], 4: [372, 287], 5: [483, 362], 6: [342, 362],
+#              7: [511, 450], 8: [320, 450], 9: [520, 540], 10: [303, 540], 11: [461, 553], 12: [368, 553],
+#              13: [454, 675], 14: [357, 675], 15: [449, 780], 16: [354, 780]}
 
-webcam = cv2.VideoCapture(0)
+#webcam = cv2.VideoCapture(0)
+webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
 if not webcam.isOpened():
     raise Exception("Errore nell'apertura della webcam")
 
@@ -59,7 +60,7 @@ while ret:
             src = out_im
             dst = cv2.imread("model/skeleton_2d.jpg")
             h = Homography(src, dst)
-            punti2d = [[160, 42], [235, 111], [93, 111], [211, 301], [120, 301]]
+            punti2d = [[410, 292], [483, 362], [342, 362], [461, 553], [368, 553]]
             punti3d = []
             index_list = [0, 5, 6, 11, 12]
             count = 0
