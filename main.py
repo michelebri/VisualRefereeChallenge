@@ -1,6 +1,7 @@
 from Detection import Detection
 from Homography import Homography
 from preprocessing import red_filtering, segmentation_and_cropping, equalizing, squaring
+from tracking import kalman_filter
 import cv2
 from PIL import Image
 
@@ -21,7 +22,8 @@ from PIL import Image
 #              13: [454, 675], 14: [357, 675], 15: [449, 780], 16: [354, 780]}
 
 #webcam = cv2.VideoCapture(0)
-webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
+# webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
+webcam = cv2.VideoCapture('resources/michael_pushing_free_kick.avi')
 if not webcam.isOpened():
     raise Exception("Errore nell'apertura della webcam")
 
@@ -49,8 +51,12 @@ while ret:
         # annullare una dimensione
 
         image = cv2.resize(squared_image, (input_size, input_size))
-        keypoint_dict, out_im = movenet.inference(image, 0.2)
+        keypoint_dict, out_im = movenet.inference(image, 0.1)
         cv2.imshow("Pose estimation", out_im)
+
+        # -----------------------------KALMAN+MUNKRES START HERE-----------------------------
+        keypoint_dict = kalman_filter(keypoint_dict)
+        # ------------------------------KALMAN+MUNKRES END HERE------------------------------
 
         if bool(keypoint_dict):
             # -----------------------------HOMOGRAPHY START HERE-----------------------------
@@ -82,8 +88,13 @@ while ret:
                 h._compute_view_based_homography(corr)
                 plan_view = cv2.warpPerspective(src, h.H, (dst.shape[1], dst.shape[0]))
                 plan_view = cv2.cvtColor(plan_view, cv2.COLOR_BGR2RGB)
-                cv2.imshow("Pose estimation homography", plan_view)
+                cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
             # ------------------------------HOMOGRAPHY END HERE------------------------------
+
+            # -----------------------------TRACKING START HERE-----------------------------
+            # tracked = plan_view.copy()
+            # TODO: add tracking code 
+            # ------------------------------TRACKING END HERE------------------------------
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
