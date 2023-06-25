@@ -1,8 +1,8 @@
 from Detection import Detection
 from Homography import Homography
 from preprocessing import red_filtering, segmentation_and_cropping, equalizing, squaring
-from tracking import kalman_filter
 from HeatMapGenerator import HeatMapGenerator
+from Filter import filter, draw_keypoint_on_image
 import cv2
 from PIL import Image
 
@@ -59,9 +59,11 @@ while ret:
         out_im = cv2.cvtColor(out_im, cv2.COLOR_BGR2RGB)
         cv2.imshow("Pose estimation", out_im)
 
-        # -----------------------------KALMAN+MUNKRES START HERE-----------------------------
-        keypoint_dict = kalman_filter(keypoint_dict)
-        # ------------------------------KALMAN+MUNKRES END HERE------------------------------
+        # -----------------------------KALMAN START HERE-----------------------------
+        keypoint_dict = filter(keypoint_dict)
+        # keypoint_dict = kalman_filter(keypoint_dict)
+        cv2.imshow("More stable keypoint", draw_keypoint_on_image(image.copy(), keypoint_dict))
+        # ------------------------------KALMAN END HERE------------------------------
 
         if bool(keypoint_dict):
             # -----------------------------HOMOGRAPHY START HERE-----------------------------
