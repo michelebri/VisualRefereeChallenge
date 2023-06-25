@@ -8,7 +8,7 @@ import cv2
 # SD_ACC = 0.1
 # X_SD = 0.05
 # Y_SD = 0.05
-DT = 5
+DT = 4
 A_X = 2
 A_Y = 2
 SD_ACC = 1

@@ -47,6 +47,6 @@ class HeatMapGenerator:
         result_overlay = cv2.addWeighted(self.first_frame, 0.7, color_image, 0.7, 0)
 
         # Salva l'immagine di sovrapposizione finale
-        cv2.imwrite('diff-overlay.jpg', result_overlay)
+        cv2.imwrite('output_heatmap_generator/diff-overlay.jpg', result_overlay)
         self.result_overlay = result_overlay
 

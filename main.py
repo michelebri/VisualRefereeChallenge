@@ -4,7 +4,6 @@ from preprocessing import red_filtering, segmentation_and_cropping, equalizing, 
 from HeatMapGenerator import HeatMapGenerator
 from Filter import filter, draw_keypoint_on_image
 import cv2
-from PIL import Image
 import numpy as np
 
 # Movenet Keypoints Output
@@ -19,9 +18,9 @@ import numpy as np
 # 13: 'left_knee',      14: 'right_knee',
 # 15: 'left_ankle',     16: 'right_ankle'
 
-# dst_point = {0: [410, 292], 1: [422, 281], 2: [396, 281], 3: [444, 287], 4: [372, 287], 5: [483, 362], 6: [342, 362],
-#              7: [511, 450], 8: [320, 450], 9: [520, 540], 10: [303, 540], 11: [461, 553], 12: [368, 553],
-#              13: [454, 675], 14: [357, 675], 15: [449, 780], 16: [354, 780]}
+# dst_point = {0: [676, 296], 1: [687, 282], 2: [661, 282], 3: [713, 288], 4: [638, 288], 5: [750, 367], 6: [607, 367],
+#              7: [780, 460], 8: [582, 460], 9: [789, 552], 10: [565, 552], 11: [728, 566], 12: [633, 566],
+#              13: [719, 690], 14: [622, 690], 15: [715, 800], 16: [616, 800]}
 
 webcam = cv2.VideoCapture(0)
 # webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
@@ -34,7 +33,7 @@ movenet = Detection(input_size)
 ret, image = webcam.read()
 first_iteration_indicator = 1
 hg = None
-dst = cv2.imread("model/skeleton_2d.jpg")
+dst = cv2.imread("resources/skeleton_2d.jpg")
 h = Homography()
 skip = False
 while ret:
@@ -69,7 +68,7 @@ while ret:
 
         if bool(keypoint_dict):
             # -----------------------------HOMOGRAPHY START HERE-----------------------------
-            punti2d = [[410, 292], [483, 362], [342, 362], [461, 553], [368, 553]]
+            punti2d = [[676, 296], [750, 367], [607, 367], [728, 566], [633, 566]]
             punti3d = []
             index_list = [0, 5, 6, 11, 12]
             count = 0
@@ -89,7 +88,7 @@ while ret:
             else:
                 corr = h.normalize_points(punti2d, punti3d)
                 h._compute_view_based_homography(corr)
-                if h.error < 0.05:
+                if h.error < 0.07:
                     # plan_view = cv2.warpPerspective(out_im, h.H, (dst.shape[1], dst.shape[0]))
                     # cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
                     try:
@@ -100,19 +99,16 @@ while ret:
                     else:
                         # Definisco i punti di origine(polsi) nell'immagine di partenza
                         src_point_1 = np.array([[int(keypoint_dict[9][0]), int(keypoint_dict[9][1])]], dtype=np.float32)
-                        src_point_2 = np.array([[int(keypoint_dict[10][0]), int(keypoint_dict[10][1])]],
-                                               dtype=np.float32)
+                        src_point_2 = np.array([[int(keypoint_dict[10][0]), int(keypoint_dict[10][1])]], dtype=np.float32)
                         # Eseguo l'omografia sui punti di origine
                         transformed_point_1 = cv2.perspectiveTransform(src_point_1.reshape(-1, 1, 2), h.H)
                         transformed_point_2 = cv2.perspectiveTransform(src_point_2.reshape(-1, 1, 2), h.H)
                         # Disegno il punto trasformato sull'immagine di output (818 x 1047)
-                        plan_view = np.zeros((1047, 818, 3), dtype=np.uint8)
+                        plan_view = np.zeros((dst.shape[0], dst.shape[1], dst.shape[2]), dtype=np.uint8)
                         cv2.circle(plan_view, (int(transformed_point_1[0][0][0]), int(transformed_point_1[0][0][1])),
-                                   radius=5,
-                                   color=(0, 0, 255), thickness=-1)
+                                   radius=5, color=(0, 0, 255), thickness=-1)
                         cv2.circle(plan_view, (int(transformed_point_2[0][0][0]), int(transformed_point_2[0][0][1])),
-                                   radius=5,
-                                   color=(0, 0, 255), thickness=-1)
+                                   radius=5, color=(0, 0, 255), thickness=-1)
                         # Visualizzo l'immagine di output
                         cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
                 else:
@@ -143,6 +139,7 @@ while ret:
             break
 
     skip = False
+    cv2.imshow('Immagine mint', image)
     ret, image = webcam.read()
 
 webcam.release()
