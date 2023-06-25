@@ -32,7 +32,7 @@ class HeatMapGenerator:
             # maxValue. Se vuoi che il movimento venga rilevato di più, aumenta il valore di maxValue.
             # Per rilevare la minor quantità di movimento nel tempo, imposta maxValue = 1.
             thresh = 2
-            maxValue = 12.5
+            maxValue = 50
             ret, th1 = cv2.threshold(fgmask, thresh, maxValue, cv2.THRESH_BINARY)
 
             # Aggiunge all'immagine di accumulo
