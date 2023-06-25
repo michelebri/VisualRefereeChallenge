@@ -5,6 +5,7 @@ from HeatMapGenerator import HeatMapGenerator
 from Filter import filter, draw_keypoint_on_image
 import cv2
 from PIL import Image
+import numpy as np
 
 # Movenet Keypoints Output
 #
@@ -22,8 +23,8 @@ from PIL import Image
 #              7: [511, 450], 8: [320, 450], 9: [520, 540], 10: [303, 540], 11: [461, 553], 12: [368, 553],
 #              13: [454, 675], 14: [357, 675], 15: [449, 780], 16: [354, 780]}
 
-# webcam = cv2.VideoCapture(0)
-webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
+webcam = cv2.VideoCapture(0)
+# webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
 # webcam = cv2.VideoCapture('resources/michael_pushing_free_kick.avi')
 if not webcam.isOpened():
     raise Exception("Errore nell'apertura della webcam")
@@ -33,6 +34,8 @@ movenet = Detection(input_size)
 ret, image = webcam.read()
 first_iteration_indicator = 1
 hg = None
+dst = cv2.imread("model/skeleton_2d.jpg")
+h = Homography()
 while ret:
 
 
@@ -67,11 +70,6 @@ while ret:
 
         if bool(keypoint_dict):
             # -----------------------------HOMOGRAPHY START HERE-----------------------------
-            image_pil = Image.fromarray(out_im, 'RGB')
-            image_pil.save('model/src.jpg')
-            src = out_im
-            dst = cv2.imread("model/skeleton_2d.jpg")
-            h = Homography(src, dst)
             punti2d = [[410, 292], [483, 362], [342, 362], [461, 553], [368, 553]]
             punti3d = []
             index_list = [0, 5, 6, 11, 12]
@@ -92,8 +90,10 @@ while ret:
             else:
                 corr = h.normalize_points(punti2d, punti3d)
                 h._compute_view_based_homography(corr)
-                plan_view = cv2.warpPerspective(src, h.H, (dst.shape[1], dst.shape[0]))
-                cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
+                if h.error < 0.05:
+                    plan_view = cv2.warpPerspective(out_im, h.H, (dst.shape[1], dst.shape[0]))
+                    cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
+
             # ------------------------------HOMOGRAPHY END HERE------------------------------
 
             # -----------------------------HEATMAP GENERATION START HERE-----------------------------
