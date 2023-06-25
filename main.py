@@ -2,10 +2,11 @@ from Detection import Detection
 from Homography import Homography
 from preprocessing import red_filtering, segmentation_and_cropping, equalizing, squaring
 from tracking import kalman_filter
+from HeatMapGenerator import HeatMapGenerator
 import cv2
 from PIL import Image
 
-# Movenet Keypoints Ouput
+# Movenet Keypoints Output
 #
 # 0:' nose',
 # 1:'left_eye',         2:'right_eye',
@@ -21,16 +22,19 @@ from PIL import Image
 #              7: [511, 450], 8: [320, 450], 9: [520, 540], 10: [303, 540], 11: [461, 553], 12: [368, 553],
 #              13: [454, 675], 14: [357, 675], 15: [449, 780], 16: [354, 780]}
 
-#webcam = cv2.VideoCapture(0)
-# webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
-webcam = cv2.VideoCapture('resources/michael_pushing_free_kick.avi')
+# webcam = cv2.VideoCapture(0)
+webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
+# webcam = cv2.VideoCapture('resources/michael_pushing_free_kick.avi')
 if not webcam.isOpened():
     raise Exception("Errore nell'apertura della webcam")
 
 input_size = 192
 movenet = Detection(input_size)
 ret, image = webcam.read()
+first_iteration_indicator = 1
+hg = None
 while ret:
+
 
     image = cv2.flip(image, 1)
     # -----------------------------PREPROCESSING START HERE-----------------------------
@@ -52,6 +56,7 @@ while ret:
 
         image = cv2.resize(squared_image, (input_size, input_size))
         keypoint_dict, out_im = movenet.inference(image, 0.1)
+        out_im = cv2.cvtColor(out_im, cv2.COLOR_BGR2RGB)
         cv2.imshow("Pose estimation", out_im)
 
         # -----------------------------KALMAN+MUNKRES START HERE-----------------------------
@@ -60,7 +65,6 @@ while ret:
 
         if bool(keypoint_dict):
             # -----------------------------HOMOGRAPHY START HERE-----------------------------
-            out_im = cv2.cvtColor(out_im, cv2.COLOR_BGR2RGB)
             image_pil = Image.fromarray(out_im, 'RGB')
             image_pil.save('model/src.jpg')
             src = out_im
@@ -87,9 +91,22 @@ while ret:
                 corr = h.normalize_points(punti2d, punti3d)
                 h._compute_view_based_homography(corr)
                 plan_view = cv2.warpPerspective(src, h.H, (dst.shape[1], dst.shape[0]))
-                plan_view = cv2.cvtColor(plan_view, cv2.COLOR_BGR2RGB)
                 cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
             # ------------------------------HOMOGRAPHY END HERE------------------------------
+
+            # -----------------------------HEATMAP GENERATION START HERE-----------------------------
+            # Osserva plan_view è in formato BGR, a causa del metodo warpPerspective di OpenCV
+            if first_iteration_indicator == 1:
+                hg = HeatMapGenerator()
+                hg.generate_heatmap(plan_view, first_iteration_indicator)
+                result_overlay = hg.get_result_overlay()
+                cv2.imshow("HeatMap", result_overlay)
+                first_iteration_indicator = 0
+            else:
+                hg.generate_heatmap(plan_view, first_iteration_indicator)
+                result_overlay = hg.get_result_overlay()
+                cv2.imshow("HeatMap", result_overlay)
+            # -----------------------------HEATMAP GENERATION END HERE-------------------------------
 
             # -----------------------------TRACKING START HERE-----------------------------
             # tracked = plan_view.copy()
