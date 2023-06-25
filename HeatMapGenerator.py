@@ -14,7 +14,7 @@ class HeatMapGenerator:
     def get_result_overlay(self):
         return self.result_overlay
 
-    def set_text(self, value):
+    def set_result_overlay(self, value):
         self.result_overlay = value
 
     def generate_heatmap(self, frame, first_iteration_indicator):
