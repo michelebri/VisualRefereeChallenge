@@ -6,7 +6,8 @@ import numpy as np
 class HeatMapGenerator:
 
     def __init__(self):
-        self.fgbg = cv2.bgsegm.createBackgroundSubtractorMOG()
+        # self.fgbg = cv2.bgsegm.createBackgroundSubtractorMOG() # DEPRECATED
+        self.fgbg = cv2.createBackgroundSubtractorMOG2()
         self.first_frame = None
         self.accum_image = None
         self.result_overlay = None

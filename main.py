@@ -2,7 +2,7 @@ from Detection import Detection
 from Homography import Homography
 from preprocessing import red_filtering, segmentation_and_cropping, equalizing, squaring
 from HeatMapGenerator import HeatMapGenerator
-from Filter import filter, draw_keypoint_on_image
+from Filter import KalmanWrapper, draw_keypoint_on_image
 import cv2
 from PIL import Image
 import numpy as np
@@ -36,6 +36,8 @@ first_iteration_indicator = 1
 hg = None
 dst = cv2.imread("model/skeleton_2d.jpg")
 h = Homography()
+skip = True
+kalman_wrapper = KalmanWrapper(max_prediction=5) # increasing max_prediction, lowers the "speed" at which the filter update the keypoint coordinate
 while ret:
 
 
@@ -58,13 +60,19 @@ while ret:
         # annullare una dimensione
 
         image = cv2.resize(squared_image, (input_size, input_size))
-        keypoint_dict, out_im = movenet.inference(image, 0.1)
+        keypoint_dict, out_im = movenet.inference(image, 0.35)
         out_im = cv2.cvtColor(out_im, cv2.COLOR_BGR2RGB)
         cv2.imshow("Pose estimation", out_im)
 
         # -----------------------------KALMAN START HERE-----------------------------
-        keypoint_dict = filter(keypoint_dict)
-        # keypoint_dict = kalman_filter(keypoint_dict)
+        measurement = {}
+        for key in keypoint_dict.keys():
+            # extract current measured coords for keypoint labeled 'key'
+            measure = np.array( [ [keypoint_dict[key][0]] , [keypoint_dict[key][1]]] )
+            print("measured coordinate={} for keypoint={}".format(measure, key))
+            # adding measured keypoint coords to measurement dictionary
+            measurement.update( { key: measure } )
+        keypoint_dict = kalman_wrapper.update(measurement)
         cv2.imshow("More stable keypoint", draw_keypoint_on_image(image.copy(), keypoint_dict))
         # ------------------------------KALMAN END HERE------------------------------
 
@@ -85,40 +93,64 @@ while ret:
             for index in sorted(index_to_remove, reverse=True):
                 del punti2d[index]
 
-            if len(punti2d) < 3 or len(punti3d) < 3:
+            if len(punti2d) < 4 or len(punti3d) < 4:
                 pass
             else:
                 corr = h.normalize_points(punti2d, punti3d)
                 h._compute_view_based_homography(corr)
                 if h.error < 0.05:
-                    plan_view = cv2.warpPerspective(out_im, h.H, (dst.shape[1], dst.shape[0]))
-                    cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
+                    # plan_view = cv2.warpPerspective(out_im, h.H, (dst.shape[1], dst.shape[0]))
+                    # cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
+                    try:
+                        test = int(keypoint_dict[9][0]) + int(keypoint_dict[9][1]) + int(keypoint_dict[10][0]) + int(
+                            keypoint_dict[10][1])
+                    except:
+                        skip = True
+                    else:
+                        # Definisco i punti di origine(polsi) nell'immagine di partenza
+                        src_point_1 = np.array([[int(keypoint_dict[9][0]), int(keypoint_dict[9][1])]], dtype=np.float32)
+                        src_point_2 = np.array([[int(keypoint_dict[10][0]), int(keypoint_dict[10][1])]],
+                                               dtype=np.float32)
+                        # Eseguo l'omografia sui punti di origine
+                        transformed_point_1 = cv2.perspectiveTransform(src_point_1.reshape(-1, 1, 2), h.H)
+                        transformed_point_2 = cv2.perspectiveTransform(src_point_2.reshape(-1, 1, 2), h.H)
+                        # Disegno il punto trasformato sull'immagine di output (818 x 1047)
+                        plan_view = np.zeros((1047, 818, 3), dtype=np.uint8)
+                        cv2.circle(plan_view, (int(transformed_point_1[0][0][0]), int(transformed_point_1[0][0][1])),
+                                   radius=5,
+                                   color=(0, 0, 255), thickness=-1)
+                        cv2.circle(plan_view, (int(transformed_point_2[0][0][0]), int(transformed_point_2[0][0][1])),
+                                   radius=5,
+                                   color=(0, 0, 255), thickness=-1)
+                        # Visualizzo l'immagine di output
+                        cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
+                else:
+                    skip = True
+                # ------------------------------HOMOGRAPHY END HERE------------------------------
 
-            # ------------------------------HOMOGRAPHY END HERE------------------------------
+                # -----------------------------HEATMAP GENERATION START HERE-----------------------------
+                # Osserva plan_view è in formato BGR, a causa del metodo warpPerspective di OpenCV
+                if first_iteration_indicator == 1 and not skip:
+                    hg = HeatMapGenerator()
+                    hg.generate_heatmap(plan_view, first_iteration_indicator)
+                    result_overlay = hg.get_result_overlay()
+                    cv2.imshow("HeatMap", result_overlay)
+                    first_iteration_indicator = 0
+                elif not skip:
+                    hg.generate_heatmap(plan_view, first_iteration_indicator)
+                    result_overlay = hg.get_result_overlay()
+                    cv2.imshow("HeatMap", result_overlay)
+                # -----------------------------HEATMAP GENERATION END HERE-------------------------------
 
-            # -----------------------------HEATMAP GENERATION START HERE-----------------------------
-            # Osserva plan_view è in formato BGR, a causa del metodo warpPerspective di OpenCV
-            if first_iteration_indicator == 1:
-                hg = HeatMapGenerator()
-                hg.generate_heatmap(plan_view, first_iteration_indicator)
-                result_overlay = hg.get_result_overlay()
-                cv2.imshow("HeatMap", result_overlay)
-                first_iteration_indicator = 0
-            else:
-                hg.generate_heatmap(plan_view, first_iteration_indicator)
-                result_overlay = hg.get_result_overlay()
-                cv2.imshow("HeatMap", result_overlay)
-            # -----------------------------HEATMAP GENERATION END HERE-------------------------------
-
-            # -----------------------------TRACKING START HERE-----------------------------
-            # tracked = plan_view.copy()
-            # TODO: add tracking code 
-            # ------------------------------TRACKING END HERE------------------------------
+                # -----------------------------TRACKING START HERE-----------------------------
+                # tracked = plan_view.copy()
+                # TODO: add tracking code
+                # ------------------------------TRACKING END HERE------------------------------
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
             break
-
+    skip = False
     ret, image = webcam.read()
 
 webcam.release()
