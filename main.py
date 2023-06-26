@@ -5,6 +5,7 @@ from HeatMapGenerator import HeatMapGenerator
 from Filter import filter, draw_keypoint_on_image
 import cv2
 import numpy as np
+import time
 
 # Movenet Keypoints Output
 #
@@ -33,9 +34,11 @@ movenet = Detection(input_size)
 ret, image = webcam.read()
 first_iteration_indicator = 1
 hg = None
-dst = cv2.imread("resources/skeleton_2d.jpg")
+dst = cv2.imread("model/skeleton_2d.jpg")
 h = Homography()
 skip = False
+inizio = time.time()
+frameacq = 0
 while ret:
 
     image = cv2.flip(image, 1)
@@ -68,9 +71,9 @@ while ret:
 
         if bool(keypoint_dict):
             # -----------------------------HOMOGRAPHY START HERE-----------------------------
-            punti2d = [[676, 296], [750, 367], [607, 367], [728, 566], [633, 566]]
+            punti2d = [[410, 290], [343, 360], [484, 360], [460, 550], [371, 546]]
             punti3d = []
-            index_list = [0, 5, 6, 11, 12]
+            index_list = [0, 5, 6, 12, 11]
             count = 0
             index_to_remove = []
             for i in index_list:
@@ -114,19 +117,31 @@ while ret:
                 else:
                     skip = True
                 # ------------------------------HOMOGRAPHY END HERE------------------------------
-
+                gesto = "CornerKick"
                 # -----------------------------HEATMAP GENERATION START HERE-----------------------------
                 # Osserva plan_view è in formato BGR, a causa del metodo warpPerspective di OpenCV
                 if first_iteration_indicator == 1 and not skip:
                     hg = HeatMapGenerator()
                     hg.generate_heatmap(plan_view, first_iteration_indicator)
                     result_overlay = hg.get_result_overlay()
-                    cv2.imshow("HeatMap", result_overlay)
+                    cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
                     first_iteration_indicator = 0
+                    
                 elif not skip:
                     hg.generate_heatmap(plan_view, first_iteration_indicator)
                     result_overlay = hg.get_result_overlay()
-                    cv2.imshow("HeatMap", result_overlay)
+                    cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
+                    if(time.time() - inizio > 10):
+
+                        cv2.imwrite(gesto + str(frameacq) + ".jpg", result_overlay)
+                        frameacq = frameacq +1;
+                        hg.clean()
+                        cv2.destroyAllWindows()
+                        time.sleep(4)
+                        inizio = time.time()
+                        first_iteration_indicator = 1
+                        
+
                 # -----------------------------HEATMAP GENERATION END HERE-------------------------------
 
                 # -----------------------------TRACKING START HERE-----------------------------
