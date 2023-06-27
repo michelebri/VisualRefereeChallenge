@@ -47,7 +47,7 @@ dst = cv2.imread("resources/skeleton_2d.jpg")
 h = Homography()
 skip = False
 inizio = time.time()
-gestures = ['kick_in', 'goal_kick', 'corner_kick', 'goal', 'pushing_free_kick', 'full_time', 'substitution']
+gestures = ['kickin', 'goalkick', 'cornerkick', 'goal', 'pushingfreekick', 'fulltime', 'substitution']
 gesture_index = 0
 while ret:
     gesture_image = cv2.imread("./gestures/" + str(gesture_index) + ".jpg")
