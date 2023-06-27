@@ -23,6 +23,11 @@ import time
 #              7: [780, 460], 8: [582, 460], 9: [789, 552], 10: [565, 552], 11: [728, 566], 12: [633, 566],
 #              13: [719, 690], 14: [622, 690], 15: [715, 800], 16: [616, 800]}
 
+print("\n")
+stringa = "\033[1;92m Please enter the acquisition number: "
+frameacq = input(stringa)
+print("\n")
+
 webcam = cv2.VideoCapture(0)
 # webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
 # webcam = cv2.VideoCapture('resources/michael_pushing_free_kick.avi')
@@ -38,8 +43,11 @@ dst = cv2.imread("resources/skeleton_2d.jpg")
 h = Homography()
 skip = False
 inizio = time.time()
-frameacq = 0
+gestures = ['kick_in', 'goal_kick', 'corner_kick', 'goal', 'pushing_free_kick', 'full_time', 'substitution']
+gesture_index = 0
 while ret:
+    gesture_image = cv2.imread("./gestures/" + str(gesture_index) + ".jpg")
+    cv2.imshow("Gesture to imitate", gesture_image)
 
     image = cv2.flip(image, 1)
     # -----------------------------PREPROCESSING START HERE-----------------------------
@@ -62,7 +70,7 @@ while ret:
         image = cv2.resize(squared_image, (input_size, input_size))
         keypoint_dict, out_im = movenet.inference(image, 0.35)
         out_im = cv2.cvtColor(out_im, cv2.COLOR_BGR2RGB)
-        cv2.imshow("Pose estimation", out_im)
+        #cv2.imshow("Pose estimation", out_im)
 
         # -----------------------------KALMAN START HERE-----------------------------
         keypoint_dict = filter(keypoint_dict)
@@ -113,34 +121,36 @@ while ret:
                         cv2.circle(plan_view, (int(transformed_point_2[0][0][0]), int(transformed_point_2[0][0][1])),
                                    radius=5, color=(0, 0, 255), thickness=-1)
                         # Visualizzo l'immagine di output
-                        cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
+                        #cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
                 else:
                     skip = True
                 # ------------------------------HOMOGRAPHY END HERE------------------------------
-                gesto = "CornerKick"
+                gesto = gestures[gesture_index]
                 # -----------------------------HEATMAP GENERATION START HERE-----------------------------
                 # Osserva plan_view è in formato BGR, a causa del metodo warpPerspective di OpenCV
                 if first_iteration_indicator == 1 and not skip:
                     hg = HeatMapGenerator()
                     hg.generate_heatmap(plan_view, first_iteration_indicator)
                     result_overlay = hg.get_result_overlay()
-                    cv2.imshow("HeatMap_" + gesto, result_overlay)
+                    #cv2.imshow("HeatMap_" + gesto, result_overlay)
                     first_iteration_indicator = 0
                     
                 elif not skip:
                     hg.generate_heatmap(plan_view, first_iteration_indicator)
                     result_overlay = hg.get_result_overlay()
-                    cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
+                    #cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
 
                     if time.time() - inizio > 10:
                         result_overlay = cv2.resize(result_overlay, (600, 600))
-                        cv2.imwrite("output_heatmap_generator/" + gesto + str(frameacq) + ".jpg", result_overlay)
-                        frameacq = frameacq + 1
+                        cv2.imwrite("output_heatmap_generator/" + gesto + '_' + str(frameacq) + ".jpg", result_overlay)
                         hg.clean()
                         cv2.destroyAllWindows()
                         time.sleep(4)
                         inizio = time.time()
                         first_iteration_indicator = 1
+                        gesture_index = gesture_index + 1
+                        if gesture_index > 6:
+                            exit(0)
 
 
                 # -----------------------------HEATMAP GENERATION END HERE-------------------------------
