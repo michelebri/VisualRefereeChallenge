@@ -24,8 +24,12 @@ import time
 #              13: [719, 690], 14: [622, 690], 15: [715, 800], 16: [616, 800]}
 
 print("\n")
-stringa = "\033[1;92m Please enter the acquisition number: "
+stringa = "Please enter the acquisition number: "
 frameacq = input(stringa)
+print("\n")
+
+stringa = "Please enter your name: "
+name = input(stringa)
 print("\n")
 
 webcam = cv2.VideoCapture(0)
@@ -142,10 +146,10 @@ while ret:
 
                     if time.time() - inizio > 10:
                         result_overlay = cv2.resize(result_overlay, (600, 600))
-                        cv2.imwrite("output_heatmap_generator/" + gesto + '_' + str(frameacq) + ".jpg", result_overlay)
+                        cv2.imwrite("output_heatmap_generator/" + gesto + '_' + name + '_' + str(frameacq) + ".jpg", result_overlay)
                         hg.clean()
                         cv2.destroyAllWindows()
-                        time.sleep(4)
+                        time.sleep(3)
                         inizio = time.time()
                         first_iteration_indicator = 1
                         gesture_index = gesture_index + 1
