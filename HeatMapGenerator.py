@@ -14,10 +14,6 @@ class HeatMapGenerator:
     def get_result_overlay(self):
         return self.result_overlay
 
-    def clean(self):
-        print("pulisco immagine")
-        self.result_overlay = None
-
     def set_result_overlay(self, value):
         self.result_overlay = value
 
@@ -52,3 +48,6 @@ class HeatMapGenerator:
 
         self.result_overlay = result_overlay
 
+    def clean(self):
+        print("pulisco immagine")
+        self.result_overlay = None
