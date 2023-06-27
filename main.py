@@ -56,9 +56,9 @@ while ret:
     image = cv2.flip(image, 1)
     # -----------------------------PREPROCESSING START HERE-----------------------------
     # RED FILTERING
-    full_mask = red_filtering(image)
+    # full_mask = red_filtering(image)
     # SEGMENTATION E CROPPING
-    cropped_image = segmentation_and_cropping(image, full_mask)
+    # cropped_image = segmentation_and_cropping(image, full_mask)
     # NORMALIZATION
     normalized_image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
     # EQUALIZATION
@@ -104,8 +104,6 @@ while ret:
                 corr = h.normalize_points(punti2d, punti3d)
                 h._compute_view_based_homography(corr)
                 if h.error < 0.07:
-                    # plan_view = cv2.warpPerspective(out_im, h.H, (dst.shape[1], dst.shape[0]))
-                    # cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
                     try:
                         test = int(keypoint_dict[9][0]) + int(keypoint_dict[9][1]) + int(keypoint_dict[10][0]) + int(
                             keypoint_dict[10][1])
@@ -155,14 +153,7 @@ while ret:
                         gesture_index = gesture_index + 1
                         if gesture_index > 6:
                             exit(0)
-
-
                 # -----------------------------HEATMAP GENERATION END HERE-------------------------------
-
-                # -----------------------------TRACKING START HERE-----------------------------
-                # tracked = plan_view.copy()
-                # TODO: add tracking code
-                # ------------------------------TRACKING END HERE------------------------------
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
