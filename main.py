@@ -34,7 +34,7 @@ movenet = Detection(input_size)
 ret, image = webcam.read()
 first_iteration_indicator = 1
 hg = None
-dst = cv2.imread("model/skeleton_2d.jpg")
+dst = cv2.imread("resources/skeleton_2d.jpg")
 h = Homography()
 skip = False
 inizio = time.time()
@@ -71,9 +71,9 @@ while ret:
 
         if bool(keypoint_dict):
             # -----------------------------HOMOGRAPHY START HERE-----------------------------
-            punti2d = [[410, 290], [343, 360], [484, 360], [460, 550], [371, 546]]
+            punti2d = [[676, 296], [750, 367], [607, 367], [728, 566], [633, 566]]
             punti3d = []
-            index_list = [0, 5, 6, 12, 11]
+            index_list = [0, 5, 6, 11, 12]
             count = 0
             index_to_remove = []
             for i in index_list:
@@ -124,23 +124,24 @@ while ret:
                     hg = HeatMapGenerator()
                     hg.generate_heatmap(plan_view, first_iteration_indicator)
                     result_overlay = hg.get_result_overlay()
-                    cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
+                    cv2.imshow("HeatMap_" + gesto, result_overlay)
                     first_iteration_indicator = 0
                     
                 elif not skip:
                     hg.generate_heatmap(plan_view, first_iteration_indicator)
                     result_overlay = hg.get_result_overlay()
                     cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
-                    if(time.time() - inizio > 10):
 
-                        cv2.imwrite(gesto + str(frameacq) + ".jpg", result_overlay)
-                        frameacq = frameacq +1;
+                    if time.time() - inizio > 10:
+                        result_overlay = cv2.resize(result_overlay, (600, 600))
+                        cv2.imwrite("output_heatmap_generator/" + gesto + str(frameacq) + ".jpg", result_overlay)
+                        frameacq = frameacq + 1
                         hg.clean()
                         cv2.destroyAllWindows()
                         time.sleep(4)
                         inizio = time.time()
                         first_iteration_indicator = 1
-                        
+
 
                 # -----------------------------HEATMAP GENERATION END HERE-------------------------------
 
