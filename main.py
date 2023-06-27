@@ -19,9 +19,9 @@ import numpy as np
 # 13: 'left_knee',      14: 'right_knee',
 # 15: 'left_ankle',     16: 'right_ankle'
 
-# dst_point = {0: [410, 292], 1: [422, 281], 2: [396, 281], 3: [444, 287], 4: [372, 287], 5: [483, 362], 6: [342, 362],
-#              7: [511, 450], 8: [320, 450], 9: [520, 540], 10: [303, 540], 11: [461, 553], 12: [368, 553],
-#              13: [454, 675], 14: [357, 675], 15: [449, 780], 16: [354, 780]}
+# dst_point = {0: [676, 296], 1: [687, 282], 2: [661, 282], 3: [713, 288], 4: [638, 288], 5: [750, 367], 6: [607, 367],
+#              7: [780, 460], 8: [582, 460], 9: [789, 552], 10: [565, 552], 11: [728, 566], 12: [633, 566],
+#              13: [719, 690], 14: [622, 690], 15: [715, 800], 16: [616, 800]}
 
 webcam = cv2.VideoCapture(0)
 # webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
@@ -36,8 +36,8 @@ first_iteration_indicator = 1
 hg = None
 dst = cv2.imread("model/skeleton_2d.jpg")
 h = Homography()
-skip = True
-kalman_wrapper = KalmanWrapper(max_prediction=5) # increasing max_prediction, lowers the "speed" at which the filter update the keypoint coordinate
+skip = False
+kalman_wrapper = KalmanWrapper(max_prediction=5) 
 while ret:
 
 
@@ -69,7 +69,7 @@ while ret:
         for key in keypoint_dict.keys():
             # extract current measured coords for keypoint labeled 'key'
             measure = np.array( [ [keypoint_dict[key][0]] , [keypoint_dict[key][1]]] )
-            print("measured coordinate={} for keypoint={}".format(measure, key))
+            # print("measured coordinate={} for keypoint={}".format(measure, key))
             # adding measured keypoint coords to measurement dictionary
             measurement.update( { key: measure } )
         keypoint_dict = kalman_wrapper.update(measurement)
@@ -78,7 +78,7 @@ while ret:
 
         if bool(keypoint_dict):
             # -----------------------------HOMOGRAPHY START HERE-----------------------------
-            punti2d = [[410, 292], [483, 362], [342, 362], [461, 553], [368, 553]]
+            punti2d = [[410, 290], [343, 360], [484, 360], [460, 550], [371, 546]]
             punti3d = []
             index_list = [0, 5, 6, 11, 12]
             count = 0
@@ -98,7 +98,7 @@ while ret:
             else:
                 corr = h.normalize_points(punti2d, punti3d)
                 h._compute_view_based_homography(corr)
-                if h.error < 0.05:
+                if h.error < 0.07:
                     # plan_view = cv2.warpPerspective(out_im, h.H, (dst.shape[1], dst.shape[0]))
                     # cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
                     try:

@@ -4,7 +4,7 @@ import cv2
 # ------------------------------COSTANT---------------------------------
 # Kalman filterS configuration parameters
 # may vary DT for better result, other parameter should be changed only if knowing exactly what you are doing
-DT = 1 
+DT = 1
 A_X = 0.1
 A_Y = 0.1
 SD_ACC = 0.1
@@ -96,10 +96,9 @@ class KalmanWrapper():
             for key in measurement.keys():
                 self.tracked_keypoints.update( { key: TrackedKeypoint(measurement[key], key, 0, False) } )
 
-        # check if all previously tracked keypoint are found, otherwise increment keypoint's prediction_count value
+        # check if all previously tracked keypoint are found, otherwise flag keypoint's prediction_flag
         for key in self.tracked_keypoints.keys():
-            # if tracked keypoint key not found in current measurement dictionary, then increment prediction_count
-            if key not in measurement:
+            if key not in measurement.keys():
                 # print('keypoint {} not found, flagged for prediction'.format(key))
                 self.tracked_keypoints[key].prediction_flag = True
 
@@ -116,26 +115,30 @@ class KalmanWrapper():
         # check if there are some newly tracked keypoint and add it to the list
         for key in measurement.keys():
             # if keypoint not found, then add it to tracked keypoint list
-            if key not in self.tracked_keypoints:
+            if key not in self.tracked_keypoints.keys():
                 # print('keypoint {} newly founded, adding to list'.format(key))
                 self.tracked_keypoints.update( { key: TrackedKeypoint(measurement[key], key, 0, False)} )
 
         # perform predict and/or update for all tracked keypoint
         filtered_keypoint_dict = {}
         for tracked_keypoint in self.tracked_keypoints.values():
+            # calling predict() before updating
+            tracked_keypoint.filter.predict()
             coords: any
             # Check if keypoint can be updated
             if tracked_keypoint.prediction_flag == False:
                 # keypoint found, resetting prediction counter
                 tracked_keypoint.prediction_count = 0
                 # get newly measured keypoint coords
-                coords = measurement.get(tracked_keypoint.label)
+                coords = measurement[tracked_keypoint.label]
             else:
+                # setting flag to false for next iteration
+                tracked_keypoint.prediction_flag = False
                 # incrementing prediction counter
                 tracked_keypoint.prediction_count += 1
-                # predict new coords
-                coords = tracked_keypoint.filter.predict()
-            # update coords with newly measured coords
+                # updating coords using latest predicted value
+                coords = tracked_keypoint.prediction_story[-1]
+            # update coords with known/newly-measured coords
             tracked_keypoint.measured_coords = tracked_keypoint.filter.update(coords)
             # print("updated coordinate={} for keypoint={}".format(tracked_keypoint.measured_coords, tracked_keypoint.label))
             # adding coords to coords_story list
