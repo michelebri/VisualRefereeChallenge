@@ -23,7 +23,20 @@ import time
 #              7: [780, 460], 8: [582, 460], 9: [789, 552], 10: [565, 552], 11: [728, 566], 12: [633, 566],
 #              13: [719, 690], 14: [622, 690], 15: [715, 800], 16: [616, 800]}
 
+<<<<<<< HEAD
 webcam = cv2.VideoCapture(1)
+=======
+print("\n")
+stringa = "Please enter the acquisition number: "
+frameacq = input(stringa)
+print("\n")
+
+stringa = "Please enter your name: "
+name = input(stringa)
+print("\n")
+
+webcam = cv2.VideoCapture(0)
+>>>>>>> 765c6ea3ee4f2100c1718664cec67fff383b5b0e
 # webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
 # webcam = cv2.VideoCapture('resources/michael_pushing_free_kick.avi')
 if not webcam.isOpened():
@@ -38,15 +51,18 @@ dst = cv2.imread("resources/skeleton_2d.jpg")
 h = Homography()
 skip = False
 inizio = time.time()
-frameacq = 0
+gestures = ['kickin', 'goalkick', 'cornerkick', 'goal', 'pushingfreekick', 'fulltime', 'substitution']
+gesture_index = 0
 while ret:
+    gesture_image = cv2.imread("./gestures/" + str(gesture_index) + ".jpg")
+    cv2.imshow("Gesture to imitate", gesture_image)
 
     image = cv2.flip(image, 1)
     # -----------------------------PREPROCESSING START HERE-----------------------------
     # RED FILTERING
-    full_mask = red_filtering(image)
+    # full_mask = red_filtering(image)
     # SEGMENTATION E CROPPING
-    cropped_image = segmentation_and_cropping(image, full_mask)
+    # cropped_image = segmentation_and_cropping(image, full_mask)
     # NORMALIZATION
     normalized_image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
     # EQUALIZATION
@@ -62,7 +78,7 @@ while ret:
         image = cv2.resize(squared_image, (input_size, input_size))
         keypoint_dict, out_im = movenet.inference(image, 0.35)
         out_im = cv2.cvtColor(out_im, cv2.COLOR_BGR2RGB)
-        cv2.imshow("Pose estimation", out_im)
+        #cv2.imshow("Pose estimation", out_im)
 
         # -----------------------------KALMAN START HERE-----------------------------
         keypoint_dict = filter(keypoint_dict)
@@ -92,8 +108,6 @@ while ret:
                 corr = h.normalize_points(punti2d, punti3d)
                 h._compute_view_based_homography(corr)
                 if h.error < 0.07:
-                    # plan_view = cv2.warpPerspective(out_im, h.H, (dst.shape[1], dst.shape[0]))
-                    # cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
                     try:
                         test = int(keypoint_dict[9][0]) + int(keypoint_dict[9][1]) + int(keypoint_dict[10][0]) + int(
                             keypoint_dict[10][1])
@@ -113,27 +127,32 @@ while ret:
                         cv2.circle(plan_view, (int(transformed_point_2[0][0][0]), int(transformed_point_2[0][0][1])),
                                    radius=5, color=(0, 0, 255), thickness=-1)
                         # Visualizzo l'immagine di output
-                        cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
+                        #cv2.imshow("Pose estimation homography + kalman filter (NO Munkres)", plan_view)
                 else:
                     skip = True
                 # ------------------------------HOMOGRAPHY END HERE------------------------------
+<<<<<<< HEAD
                 gesto = "Substituion_R_"
+=======
+                gesto = gestures[gesture_index]
+>>>>>>> 765c6ea3ee4f2100c1718664cec67fff383b5b0e
                 # -----------------------------HEATMAP GENERATION START HERE-----------------------------
                 # Osserva plan_view è in formato BGR, a causa del metodo warpPerspective di OpenCV
                 if first_iteration_indicator == 1 and not skip:
                     hg = HeatMapGenerator()
                     hg.generate_heatmap(plan_view, first_iteration_indicator)
                     result_overlay = hg.get_result_overlay()
-                    cv2.imshow("HeatMap_" + gesto, result_overlay)
+                    #cv2.imshow("HeatMap_" + gesto, result_overlay)
                     first_iteration_indicator = 0
                     
                 elif not skip:
                     hg.generate_heatmap(plan_view, first_iteration_indicator)
                     result_overlay = hg.get_result_overlay()
-                    cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
+                    #cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
 
                     if time.time() - inizio > 9:
                         result_overlay = cv2.resize(result_overlay, (600, 600))
+<<<<<<< HEAD
                         cv2.imwrite(gesto + str(frameacq) + ".jpg", result_overlay)
                         frameacq = frameacq + 1
                         hg.clean()
@@ -145,12 +164,18 @@ while ret:
                 if frameacq == 15:
                     break
 
+=======
+                        cv2.imwrite("output_heatmap_generator/" + gesto + '_' + name + '_' + str(frameacq) + ".jpg", result_overlay)
+                        hg.clean()
+                        cv2.destroyAllWindows()
+                        time.sleep(3)
+                        inizio = time.time()
+                        first_iteration_indicator = 1
+                        gesture_index = gesture_index + 1
+                        if gesture_index > 6:
+                            exit(0)
+>>>>>>> 765c6ea3ee4f2100c1718664cec67fff383b5b0e
                 # -----------------------------HEATMAP GENERATION END HERE-------------------------------
-
-                # -----------------------------TRACKING START HERE-----------------------------
-                # tracked = plan_view.copy()
-                # TODO: add tracking code
-                # ------------------------------TRACKING END HERE------------------------------
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
