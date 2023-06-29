@@ -1,41 +1,142 @@
 from Detection import Detection
 from Homography import Homography
-import numpy as np
+from preprocessing import red_filtering, segmentation_and_cropping
+from Filter import filter, draw_keypoint_on_image
 import cv2
+import matplotlib.pyplot as plt
+
+import os
+import numpy as np
 import time
 
+# Movenet Keypoints Output
+#
+# 0:' nose',
+# 1:'left_eye',         2:'right_eye',
+# 3: 'left_ear',        4: 'right_ear',
+# 5: 'left_shoulder',   6: 'right_shoulder',
+# 7: 'left_elbow',      8: 'right_elbow',
+# 9: 'left_wrist',      10: 'right_wrist',
+# 11: 'left_hip',       12: 'right_hip',
+# 13: 'left_knee',      14: 'right_knee',
+# 15: 'left_ankle',     16: 'right_ankle'
+
+# dst_point = {0: [676, 296], 1: [687, 282], 2: [661, 282], 3: [713, 288], 4: [638, 288], 5: [750, 367], 6: [607, 367],
+#              7: [780, 460], 8: [582, 460], 9: [789, 552], 10: [565, 552], 11: [728, 566], 12: [633, 566],
+#              13: [719, 690], 14: [622, 690], 15: [715, 800], 16: [616, 800]}
+frameacq = 0
 input_size = 192
+frames = 0
+indi = 0
 movenet = Detection(input_size)
+dst = cv2.imread("resources/skeleton_2d.jpg")
 h = Homography()
-dst_point = {0: [158, 43], 6: [98, 110], 5: [235, 109], 11: [120, 296], 12: [213, 301]}
-movenet_point = []
-virtual_point = []
-dst = cv2.imread("model/skeleton_2d.jpg")
-dst_h, dst_w, _ = dst.shape;
-cap = cv2.VideoCapture(0)
+kernel = np.array([[1,2,2,1],[2,6,6,2],[2,6,6,2],[1,2,2,1]])
+for video in os.listdir("video"):
+    frames = 0
+    print(video)
+    gesto = video.split("_")[0]
+    webcam = cv2.VideoCapture("video/" +video)
+    frame_count = int(webcam.get(cv2.CAP_PROP_FRAME_COUNT))
+    print("Numero di frame nel video:", frame_count)
+    first_iteration_indicator = 1
+    skip = False
+    inizio = time.time()
+    ret, image = webcam.read()
+    heatmapmod = np.zeros((dst.shape[0], dst.shape[1]))
+    heatmapmod3 = np.zeros((dst.shape[0], dst.shape[1]))
+    while ret:
+        ret, image = webcam.read()
+        frames += 1
+        if ret: 
+            image = cv2.flip(image, 1)
+            # risparmio secondi 
+            #full_mask = red_filtering(image)
+            #cropped_image = segmentation_and_cropping(image, full_mask)
+            #normalized_image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+            #equalized_image = equalizing(normalized_image)
+            squared_image = squaring(image)
+            if (squared_image.shape[0] != 0) and (squared_image.shape[1] != 0) and (squared_image.shape[2] != 0):
+                keypoint_dict, out_im = movenet.inference(squared_image, 0.35)
+                # -----------------------------KALMAN START HERE-----------------------------
+                keypoint_dict = filter(keypoint_dict)
+                if bool(keypoint_dict):
+                    # -----------------------------HOMOGRAPHY START HERE-----------------------------
+                    punti2d = [[676, 296], [750, 367], [607, 367], [728, 566], [633, 566]]
+                    punti3d = []
+                    index_list = [0, 5, 6, 11, 12]
+                    count = 0
+                    index_to_remove = []
+                    for i in index_list:
+                        try:
+                            punti3d.append([int(keypoint_dict[i][0]), int(keypoint_dict[i][1])])
+                        except:
+                            index_to_remove.append(count)
+                        finally:
+                            count = count + 1
+                    for index in sorted(index_to_remove, reverse=True):
+                        del punti2d[index]
 
-frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-pixel_to_rect = int((frame_width - frame_height) / 2)
+                    if len(punti2d) < 4 or len(punti3d) < 4:
+                        pass
+                    else:
+                            corr = h.normalize_points(punti2d, punti3d)
+                            h._compute_view_based_homography(corr)
+                    if h.error < 0.07:
+                        try:
+                            test = int(keypoint_dict[9][0]) + int(keypoint_dict[9][1]) + int(keypoint_dict[10][0]) + int(keypoint_dict[10][1])
+                        except:
+                            skip = True
+                        else:
+                            # Definisco i punti di origine(polsi) nell'immagine di partenza
+                            src_point_1 = np.array([int(keypoint_dict[9][0]), int(keypoint_dict[9][1])], dtype=np.float32)
+                            src_point_2 = np.array([int(keypoint_dict[10][0]), int(keypoint_dict[10][1])], dtype=np.float32)
+                            # Eseguo l'omografia sui punti di origine
+                            transformed_point_1 = cv2.perspectiveTransform(src_point_1.reshape(-1, 1, 2), h.H)
+                            transformed_point_2 = cv2.perspectiveTransform(src_point_2.reshape(-1, 1, 2), h.H)
+                            x1 = int(transformed_point_1[0][0][1])
+                            y1 = int(transformed_point_1[0][0][0])
+                            x2 = int(transformed_point_2[0][0][1])
+                            y2 = int(transformed_point_2[0][0][0])
+                            if frames % 3 == 0 :
+                                if ((x1-2) >= 0 and (x1+2) < heatmapmod3.shape[0]
+                                    and (y1-2) >= 0 and (y1 + 2) < heatmapmod3.shape[1]):
+                                    heatmapmod3[x1-2:x1+2, y1-2:y1+2] += kernel
+                                if ((x2-2) >= 0 and (x2+2) < heatmapmod3.shape[0]
+                                    and (y2-2) >= 0 and (y2 + 2) < heatmapmod3.shape[1]):
+                                    heatmapmod3[x2-2:x2+2, y2-2:y2+2] += kernel
+                            
+                            if ((x1-2) >= 0 and (x1+2) < heatmapmod.shape[0]
+                                and (y1-2) >= 0 and (y1 + 2) < heatmapmod.shape[1]):
+                                heatmapmod[x1-2:x1+2, y1-2:y1+2] += kernel
+                            if ((x2-2) >= 0 and (x2+2) < heatmapmod.shape[0]
+                                and (y2-2) >= 0 and (y2 + 2) < heatmapmod.shape[1]):
+                                heatmapmod[x2-2:x2+2, y2-2:y2+2] += kernel
+                    if int(frames/frame_count * 100) == 20:
+                        plt.imshow(heatmapmod3, cmap='hot', interpolation='nearest')
+                        plt.axis('off') 
+                        plt.savefig('heatmapmod3/' +gesto +  "/" + str(indi)  + '_20.jpg', bbox_inches='tight', pad_inches=0)        
+                        plt.imshow(heatmapmod, cmap='hot', interpolation='nearest')
+                        plt.axis('off') 
+                        plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_20.jpg', bbox_inches='tight', pad_inches=0)    
+                    if int(frames/frame_count * 100) == 40:
+                        plt.imshow(heatmapmod3, cmap='hot', interpolation='nearest')
+                        plt.axis('off') 
+                        plt.savefig('heatmapmod3/' +gesto +  "/" + str(indi)  + '_40.jpg', bbox_inches='tight', pad_inches=0)        
+                        plt.imshow(heatmapmod, cmap='hot', interpolation='nearest')
+                        plt.axis('off') 
+                        plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_40.jpg', bbox_inches='tight', pad_inches=0)    
 
-video_writer = cv2.VideoWriter("out.avi", cv2.VideoWriter_fourcc(*'mp4v'), 60, (input_size, input_size))
 
-while True:
-    _, image = cap.read()
-    image = image[0:frame_height, pixel_to_rect:(frame_width - pixel_to_rect)]
-    image = cv2.resize(image, (input_size, input_size))
-    keypoint_dict, out_im = movenet.inference(image, 0.4)
-    for key in keypoint_dict.keys():
-        if key != 9 and key != 10 and key != 7 and key != 8:
-            movenet_point.append(keypoint_dict[key])
-            virtual_point.append(dst_point[key])
-    corr = h.normalize_points(virtual_point, movenet_point)
-    h._compute_view_based_homography(corr)
-    plan_view = cv2.warpPerspective(out_im, h.H, (dst_w, dst_h))
-    cv2.imshow("original", out_im)
-    cv2.imshow("frame", plan_view)
-    cv2.waitKey(1)
-    video_writer.write(out_im)
 
-video_capture.release()
-video_writer.release()
+    plt.imshow(heatmapmod3, cmap='hot', interpolation='nearest')
+    plt.axis('off') 
+    plt.savefig('heatmapmod3/' +gesto +  "/" + str(indi)  + '.jpg', bbox_inches='tight', pad_inches=0)        
+    plt.imshow(heatmapmod, cmap='hot', interpolation='nearest')
+    plt.axis('off') 
+    plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '.jpg', bbox_inches='tight', pad_inches=0)    
+
+    indi = indi +1;
+
+    plt.close('all')
+    print((time.time() - inizio))

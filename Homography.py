@@ -1,11 +1,17 @@
 import numpy as np
 import cv2
 
+
+
+class UnknowCalculationMethod(BaseException):
+    pass
+
+
 class Homography:
 
     def __init__(self):
+        self.error = 0
         self.H = []
-
 
     def get_H(self):
         return self.H
@@ -22,8 +28,8 @@ class Homography:
 
             s_x, s_y = np.sqrt(2 / var_x), np.sqrt(2 / var_y)
 
-            # print("Matrix: {4} : meanx {0}, meany {1}, varx {2}, vary {3}, sx {5}, sy {6} " \
-            # .format(x_mean, y_mean, var_x,var_y, name, s_x, s_y))
+            # print("Matrix: {4} : meanx {0}, meany {1}, varx {2}, vary {3}, sx {5}, sy {6} ".format(x_mean, y_mean,
+            # var_x,var_y, name, s_x, s_y))
 
             n = np.array([[s_x, 0, -s_x * x_mean], [0, s_y, -s_y * y_mean], [0, 0, 1]])
             # print(n)
@@ -69,7 +75,6 @@ class Homography:
 
         return ret_correspondences
 
-
     def _compute_view_based_homography(self, correspondence, reproj=True):
         image_points = correspondence[0]
         object_points = correspondence[1]
@@ -90,7 +95,7 @@ class Homography:
         # print("N_observed\n", N_u)
 
         # create row wise allotment for each 0-2i rows
-        # that means 2 rows
+        # that means 2 rows..
         for i in range(N):
             X, Y = normalized_object_points[i]  # A
             u, v = normalized_image_points[i]  # B
@@ -133,10 +138,9 @@ class Homography:
                 # print(formatstring)
                 reproj_error += np.sum(np.abs(image_points[i] - t[0][:-1]))
             reproj_error = np.sqrt(reproj_error / N) / 100.0
-            print("Reprojection error : ", reproj_error)
+        self.error = reproj_error
 
         self.H = h
-
 
     def _select_points_src(self, event, x, y, flags, params):
         """
@@ -160,7 +164,7 @@ class Homography:
             self.dst_x, self.dst_y = x, y
             cv2.circle(self.dst_copy, (x, y), 5, (0, 0, 255), -1)
         elif event == cv2.EVENT_LBUTTONUP:
-            self.drawing = False   
+            self.drawing = False
 
     def __str__(self):
         return f"H = {self.H}"

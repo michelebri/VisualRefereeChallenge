@@ -1,8 +1,6 @@
-# VisualRefereeChallenge
-Code for Visual Refereee Challenge Unibas Team
-
-Requirements:
-
-  pip install tensorflow opencv-python numpy
-
-  After installing the necessary libraries run the code with python movenet.py for detection of human pose.
+TODO
+Salvare le acquisizioni .
+Step : 
+  Messaggio del gesto da eseguire
+  start timer di 10 secondi ( tempo in cui eseguire il gesto)
+  passati 10 secondi salvare immagine della heatmap con "nome_gesto_idacquisizone"

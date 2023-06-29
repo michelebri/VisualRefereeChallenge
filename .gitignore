@@ -1,3 +1,9 @@
 ﻿.idea
 __pycache__
 out.avi
+model/src.jpg
+video_registrazioni_nao
+diff-overlay.jpg
+output_heatmap_generator
+*.rar
+video/*.mp4
