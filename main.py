@@ -23,9 +23,8 @@ import time
 #              7: [780, 460], 8: [582, 460], 9: [789, 552], 10: [565, 552], 11: [728, 566], 12: [633, 566],
 #              13: [719, 690], 14: [622, 690], 15: [715, 800], 16: [616, 800]}
 
-<<<<<<< HEAD
-webcam = cv2.VideoCapture(1)
-=======
+webcam = cv2.VideoCapture(0)
+
 print("\n")
 stringa = "Please enter the acquisition number: "
 frameacq = input(stringa)
@@ -35,10 +34,6 @@ stringa = "Please enter your name: "
 name = input(stringa)
 print("\n")
 
-webcam = cv2.VideoCapture(0)
->>>>>>> 765c6ea3ee4f2100c1718664cec67fff383b5b0e
-# webcam = cv2.VideoCapture('video_registrazioni_nao/michael_pushing_free_kick.avi')
-# webcam = cv2.VideoCapture('resources/michael_pushing_free_kick.avi')
 if not webcam.isOpened():
     raise Exception("Errore nell'apertura della webcam")
 
@@ -131,11 +126,7 @@ while ret:
                 else:
                     skip = True
                 # ------------------------------HOMOGRAPHY END HERE------------------------------
-<<<<<<< HEAD
-                gesto = "Substituion_R_"
-=======
                 gesto = gestures[gesture_index]
->>>>>>> 765c6ea3ee4f2100c1718664cec67fff383b5b0e
                 # -----------------------------HEATMAP GENERATION START HERE-----------------------------
                 # Osserva plan_view è in formato BGR, a causa del metodo warpPerspective di OpenCV
                 if first_iteration_indicator == 1 and not skip:
@@ -150,31 +141,17 @@ while ret:
                     result_overlay = hg.get_result_overlay()
                     #cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
 
-                    if time.time() - inizio > 9:
+                    if time.time() - inizio > 10:
                         result_overlay = cv2.resize(result_overlay, (600, 600))
-<<<<<<< HEAD
-                        cv2.imwrite(gesto + str(frameacq) + ".jpg", result_overlay)
-                        frameacq = frameacq + 1
-                        hg.clean()
-                        cv2.destroyAllWindows()
-                        time.sleep(2)
-                        inizio = time.time()
-                        first_iteration_indicator = 1
-
-                if frameacq == 15:
-                    break
-
-=======
                         cv2.imwrite("output_heatmap_generator/" + gesto + '_' + name + '_' + str(frameacq) + ".jpg", result_overlay)
                         hg.clean()
                         cv2.destroyAllWindows()
-                        time.sleep(3)
+                        time.sleep(4)
                         inizio = time.time()
                         first_iteration_indicator = 1
                         gesture_index = gesture_index + 1
                         if gesture_index > 6:
                             exit(0)
->>>>>>> 765c6ea3ee4f2100c1718664cec67fff383b5b0e
                 # -----------------------------HEATMAP GENERATION END HERE-------------------------------
 
         key = cv2.waitKey(1) & 0xFF
