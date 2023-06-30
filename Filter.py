@@ -2,20 +2,17 @@
 import numpy as np
 import cv2
 # ------------------------------COSTANT---------------------------------
-# DT = 0.75
-# A_X = 0.1
-# A_Y = 0.1
-# SD_ACC = 0.1
-# X_SD = 0.05
-# Y_SD = 0.05
-DT = 4
-A_X = 2
-A_Y = 2
-SD_ACC = 1
-X_SD = 0.1
-Y_SD = 0.1
+# Kalman filterS configuration parameters
+# may vary DT for better result, other parameter should be changed only if knowing exactly what you are doing
+DT = 1
+A_X = 0.1
+A_Y = 0.1
+SD_ACC = 0.1
+X_SD = 0.05
+Y_SD = 0.05
 # ------------------------------CLASSES---------------------------------
 
+# Class that implement the Kalman filter
 class KalmanFilter(object):
     
     def __init__(self, dt, a_x, a_y, sd_acceleration, x_sd, y_sd):
@@ -72,78 +69,91 @@ class KalmanFilter(object):
         
         return self.x[0:2]
 
+# Class for keeping track of detected keypoint (position, label, other relevant stuff...)
 class TrackedKeypoint(object):
 
-    def __init__(self, measured_coords, label):
+    def __init__(self, measured_coords, label, prediction_count, prediction_flag):
         # self.prediction = np.asarray(detected_coords)
         self.measured_coords = measured_coords
         self.label = label
+        self.prediction_count = prediction_count
+        self.prediction_flag = prediction_flag
         self.filter = KalmanFilter(DT, A_X, A_Y, SD_ACC, X_SD, Y_SD)        
         self.prediction_story = []
 
+# Class wrapper that runs kalman filter for every tracked keypoint
 class KalmanWrapper():
 
-    def __init__(self):
-        self.tracked_keypoints = []
-
-    def predict(self):
-        '''get predictions for all tracked keypoint'''
-        # decleare filtered keypoint dictionary
-        filtered_keypoint_dict = {}
-        for i in range(len(self.tracked_keypoints)):
-            # get current tracked keypoint
-            keypoint = self.tracked_keypoints[i]
-            # predict new coords
-            predicted_coords = keypoint.filter.predict()
-
-            # add predicted coords to dictionary
-            filtered_keypoint_dict.update({ keypoint.label: predicted_coords})
-            # print("predicted coordinate={} for keypoint={}".format(predicted_coords, keypoint.label))
-
-        # return keypoint dictionary
-        return filtered_keypoint_dict
+    def __init__(self, max_prediction):
+        self.max_prediction = max_prediction
+        self.tracked_keypoints = {}
 
     def update(self, measurement):
         '''update all tracked keypoint'''
 
-        # check if there are some tracked keypoint, if not add it from measurement dictionary
+        # init tracked keypoints list, should be executed only once
         if len(self.tracked_keypoints) == 0:
             for key in measurement.keys():
-                self.tracked_keypoints.append( TrackedKeypoint(measurement[key], key) )
+                self.tracked_keypoints.update( { key: TrackedKeypoint(measurement[key], key, 0, False) } )
 
-        # perform update for all tracked keypoint
-        for i in range(len(self.tracked_keypoints)):
-            # get current tracked keypoint
-            tracked_keypoint = self.tracked_keypoints[i]
-            # get newly measured keypoint coords
-            updated_coords = tracked_keypoint.measured_coords
-            # add newly measured coords to coords_story list
-            tracked_keypoint.prediction_story.append(updated_coords)
-            # update coords with newly measured coords
-            tracked_keypoint.measured_coords = tracked_keypoint.filter.update( updated_coords )
+        # check if all previously tracked keypoint are found, otherwise flag keypoint's prediction_flag
+        for key in self.tracked_keypoints.keys():
+            if key not in measurement.keys():
+                # print('keypoint {} not found, flagged for prediction'.format(key))
+                self.tracked_keypoints[key].prediction_flag = True
+
+        # check if some tracked keypoint have been predicted a bit too much
+        deleted_keypoint = []
+        for tracked_keypoint in self.tracked_keypoints.values():
+            # if tracked keypoint prediction count greater than max possible prediction, then remove tracked keypoint
+            if tracked_keypoint.prediction_count > self.max_prediction:
+                # print('too many predictions for keypoint {}'.format(key))
+                deleted_keypoint.append(tracked_keypoint.label)
+        for i in range(len(deleted_keypoint)):
+            del self.tracked_keypoints[deleted_keypoint[i]]
+
+        # check if there are some newly tracked keypoint and add it to the list
+        for key in measurement.keys():
+            # if keypoint not found, then add it to tracked keypoint list
+            if key not in self.tracked_keypoints.keys():
+                # print('keypoint {} newly founded, adding to list'.format(key))
+                self.tracked_keypoints.update( { key: TrackedKeypoint(measurement[key], key, 0, False)} )
+
+        # perform predict and/or update for all tracked keypoint
+        filtered_keypoint_dict = {}
+        for tracked_keypoint in self.tracked_keypoints.values():
+            # calling predict() before updating
+            tracked_keypoint.filter.predict()
+            coords: any
+            # Check if keypoint can be updated
+            if tracked_keypoint.prediction_flag == False:
+                # keypoint found, resetting prediction counter
+                tracked_keypoint.prediction_count = 0
+                # get newly measured keypoint coords
+                coords = measurement[tracked_keypoint.label]
+            else:
+                # setting flag to false for next iteration
+                tracked_keypoint.prediction_flag = False
+                # incrementing prediction counter
+                tracked_keypoint.prediction_count += 1
+                # updating coords using latest predicted value
+                coords = tracked_keypoint.prediction_story[-1]
+            # update coords with known/newly-measured coords
+            tracked_keypoint.measured_coords = tracked_keypoint.filter.update(coords)
+            # print("updated coordinate={} for keypoint={}".format(tracked_keypoint.measured_coords, tracked_keypoint.label))
+            # adding coords to coords_story list
+            tracked_keypoint.prediction_story.append(coords)
+            # adding coords to dictionary
+            filtered_keypoint_dict.update({ tracked_keypoint.label: coords})
+        # return keypoint dictionary
+        return filtered_keypoint_dict
             
 # -----------------------------FUNCTION---------------------------------
 
-def filter(keypoint_dict):
-    # init wrapper
-    wrapper = KalmanWrapper()
-    # declare measurement dictionary
-    measurement = {}
-    for key in keypoint_dict.keys():
-        # extract current measured coords for keypoint labeled 'key'
-        measure = np.array( [ [keypoint_dict[key][0]] , [keypoint_dict[key][1]]] )
-        # print("measured coordinate={} for keypoint={}".format(measure, key))
-
-        # adding measured keypoint coords to measurement dictionary
-        measurement.update( { key: measure } )
-    # batch update all filter
-    wrapper.update(measurement)
-    # return (hopefully) more stable keypoint coords
-    return wrapper.predict()
-
+# Util function for visual keypoint stability feedback
 def draw_keypoint_on_image(image, keypoint_dict):
-        image = np.zeros((192, 192, 3), dtype=np.uint8)
-        for key in keypoint_dict.keys():
-            centro = (int(keypoint_dict[key][0]), int(keypoint_dict[key][1]))
-            image = cv2.circle(image, centro, 1, (255, 0, 0), 2)
-        return image
+    image = np.zeros((192, 192, 3), dtype=np.uint8)
+    for key in keypoint_dict.keys():
+        centro = (int(keypoint_dict[key][0]), int(keypoint_dict[key][1]))
+        image = cv2.circle(image, centro, 1, (255, 0, 0), 2)
+    return image

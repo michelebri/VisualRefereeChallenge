@@ -1,7 +1,7 @@
 from Detection import Detection
 from Homography import Homography
-from preprocessing import red_filtering, segmentation_and_cropping
-from Filter import filter, draw_keypoint_on_image
+from preprocessing import red_filtering, segmentation_and_cropping,squaring
+from Filter import KalmanWrapper, draw_keypoint_on_image
 import cv2
 import matplotlib.pyplot as plt
 
@@ -31,6 +31,7 @@ indi = 0
 movenet = Detection(input_size)
 dst = cv2.imread("resources/skeleton_2d.jpg")
 h = Homography()
+kalman_wrapper = KalmanWrapper(max_prediction=5) 
 kernel = np.array([[1,2,2,1],[2,6,6,2],[2,6,6,2],[1,2,2,1]])
 for video in os.listdir("video"):
     frames = 0
@@ -45,6 +46,7 @@ for video in os.listdir("video"):
     ret, image = webcam.read()
     heatmapmod = np.zeros((dst.shape[0], dst.shape[1]))
     heatmapmod3 = np.zeros((dst.shape[0], dst.shape[1]))
+    heatmapmod5 = np.zeros((dst.shape[0], dst.shape[1]))
     while ret:
         ret, image = webcam.read()
         frames += 1
@@ -59,7 +61,16 @@ for video in os.listdir("video"):
             if (squared_image.shape[0] != 0) and (squared_image.shape[1] != 0) and (squared_image.shape[2] != 0):
                 keypoint_dict, out_im = movenet.inference(squared_image, 0.35)
                 # -----------------------------KALMAN START HERE-----------------------------
-                keypoint_dict = filter(keypoint_dict)
+                measurement = {}
+                for key in keypoint_dict.keys():
+                    # extract current measured coords for keypoint labeled 'key'
+                    measure = np.array( [ [keypoint_dict[key][0]] , [keypoint_dict[key][1]]] )
+                    # print("measured coordinate={} for keypoint={}".format(measure, key))
+                    # adding measured keypoint coords to measurement dictionary
+                    measurement.update( { key: measure } )
+                keypoint_dict = kalman_wrapper.update(measurement)
+                #cv2.imshow("More stable keypoint", draw_keypoint_on_image(image.copy(), keypoint_dict))
+                #cv2.waitKey(1)
                 if bool(keypoint_dict):
                     # -----------------------------HOMOGRAPHY START HERE-----------------------------
                     punti2d = [[676, 296], [750, 367], [607, 367], [728, 566], [633, 566]]
@@ -105,6 +116,13 @@ for video in os.listdir("video"):
                                 if ((x2-2) >= 0 and (x2+2) < heatmapmod3.shape[0]
                                     and (y2-2) >= 0 and (y2 + 2) < heatmapmod3.shape[1]):
                                     heatmapmod3[x2-2:x2+2, y2-2:y2+2] += kernel
+                            if frames % 5 == 0 :
+                                if ((x1-2) >= 0 and (x1+2) < heatmapmod5.shape[0]
+                                    and (y1-2) >= 0 and (y1 + 2) < heatmapmod5.shape[1]):
+                                    heatmapmod5[x1-2:x1+2, y1-2:y1+2] += kernel
+                                if ((x2-2) >= 0 and (x2+2) < heatmapmod5.shape[0]
+                                    and (y2-2) >= 0 and (y2 + 2) < heatmapmod5.shape[1]):
+                                    heatmapmod5[x2-2:x2+2, y2-2:y2+2] += kernel
                             
                             if ((x1-2) >= 0 and (x1+2) < heatmapmod.shape[0]
                                 and (y1-2) >= 0 and (y1 + 2) < heatmapmod.shape[1]):
@@ -115,26 +133,35 @@ for video in os.listdir("video"):
                     if int(frames/frame_count * 100) == 20:
                         plt.imshow(heatmapmod3, cmap='hot', interpolation='nearest')
                         plt.axis('off') 
-                        plt.savefig('heatmapmod3/' +gesto +  "/" + str(indi)  + '_20.jpg', bbox_inches='tight', pad_inches=0)        
+                        plt.savefig('heatmap/' +gesto +  "/" + str(indi)  + '_mod3_20.jpg', bbox_inches='tight', pad_inches=0)        
                         plt.imshow(heatmapmod, cmap='hot', interpolation='nearest')
                         plt.axis('off') 
-                        plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_20.jpg', bbox_inches='tight', pad_inches=0)    
+                        plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_all_20.jpg', bbox_inches='tight', pad_inches=0)            
+                        plt.imshow(heatmapmod5, cmap='hot', interpolation='nearest')
+                        plt.axis('off') 
+                        plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_mod5_20.jpg', bbox_inches='tight', pad_inches=0)    
                     if int(frames/frame_count * 100) == 40:
                         plt.imshow(heatmapmod3, cmap='hot', interpolation='nearest')
                         plt.axis('off') 
-                        plt.savefig('heatmapmod3/' +gesto +  "/" + str(indi)  + '_40.jpg', bbox_inches='tight', pad_inches=0)        
+                        plt.savefig('heatmap/' +gesto +  "/" + str(indi)  + '_mod3_40.jpg', bbox_inches='tight', pad_inches=0)        
                         plt.imshow(heatmapmod, cmap='hot', interpolation='nearest')
                         plt.axis('off') 
-                        plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_40.jpg', bbox_inches='tight', pad_inches=0)    
+                        plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_all_40.jpg', bbox_inches='tight', pad_inches=0)    
+                        plt.imshow(heatmapmod5, cmap='hot', interpolation='nearest')
+                        plt.axis('off') 
+                        plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_mod5_40.jpg', bbox_inches='tight', pad_inches=0)    
 
 
 
     plt.imshow(heatmapmod3, cmap='hot', interpolation='nearest')
     plt.axis('off') 
-    plt.savefig('heatmapmod3/' +gesto +  "/" + str(indi)  + '.jpg', bbox_inches='tight', pad_inches=0)        
+    plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_mod3_total.jpg', bbox_inches='tight', pad_inches=0)   
+    plt.imshow(heatmapmod5, cmap='hot', interpolation='nearest')
+    plt.axis('off') 
+    plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_mod5_total.jpg', bbox_inches='tight', pad_inches=0)        
     plt.imshow(heatmapmod, cmap='hot', interpolation='nearest')
     plt.axis('off') 
-    plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '.jpg', bbox_inches='tight', pad_inches=0)    
+    plt.savefig('heatmap/' + gesto +  "/" + str(indi)  + '_all_total.jpg', bbox_inches='tight', pad_inches=0)    
 
     indi = indi +1;
 
