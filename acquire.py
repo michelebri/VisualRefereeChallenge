@@ -2,7 +2,7 @@ import cv2
 import datetime
 import time
 
-durata_video = 1
+durata_video = 15
 
 numero_video = 6
 
