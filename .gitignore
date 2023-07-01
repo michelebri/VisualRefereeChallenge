@@ -9,3 +9,4 @@ output_heatmap_generator
 video/*.mp4
 heatmap/CornerKick
 *.avi
+gestures
