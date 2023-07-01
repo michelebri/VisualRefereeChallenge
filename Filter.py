@@ -4,12 +4,12 @@ import cv2
 # ------------------------------COSTANT---------------------------------
 # Kalman filterS configuration parameters
 # may vary DT for better result, other parameter should be changed only if knowing exactly what you are doing
-DT = 1
-A_X = 0.1
-A_Y = 0.1
-SD_ACC = 0.1
-X_SD = 0.05
-Y_SD = 0.05
+# DT = 1
+# A_X = 0.1
+# A_Y = 0.1
+# SD_ACC = 0.1
+# X_SD = 0.05
+# Y_SD = 0.05
 # ------------------------------CLASSES---------------------------------
 
 # Class that implement the Kalman filter
@@ -72,20 +72,20 @@ class KalmanFilter(object):
 # Class for keeping track of detected keypoint (position, label, other relevant stuff...)
 class TrackedKeypoint(object):
 
-    def __init__(self, measured_coords, label, prediction_count, prediction_flag):
-        # self.prediction = np.asarray(detected_coords)
+    def __init__(self, measured_coords, label, prediction_count, prediction_flag, filter_setting):
         self.measured_coords = measured_coords
         self.label = label
         self.prediction_count = prediction_count
         self.prediction_flag = prediction_flag
-        self.filter = KalmanFilter(DT, A_X, A_Y, SD_ACC, X_SD, Y_SD)        
+        self.filter = KalmanFilter(filter_setting['DT'], filter_setting['A_X'], filter_setting['A_Y'], filter_setting['SD_ACC'], filter_setting['X_SD'], filter_setting['Y_SD'])  
         self.prediction_story = []
 
 # Class wrapper that runs kalman filter for every tracked keypoint
 class KalmanWrapper():
 
-    def __init__(self, max_prediction):
+    def __init__(self, max_prediction, setting: dict):
         self.max_prediction = max_prediction
+        self.filter_setting = setting
         self.tracked_keypoints = {}
 
     def update(self, measurement):
@@ -94,7 +94,7 @@ class KalmanWrapper():
         # init tracked keypoints list, should be executed only once
         if len(self.tracked_keypoints) == 0:
             for key in measurement.keys():
-                self.tracked_keypoints.update( { key: TrackedKeypoint(measurement[key], key, 0, False) } )
+                self.tracked_keypoints.update( { key: TrackedKeypoint(measurement[key], key, 0, False, self.filter_setting) } )
 
         # check if all previously tracked keypoint are found, otherwise flag keypoint's prediction_flag
         for key in self.tracked_keypoints.keys():
@@ -117,7 +117,7 @@ class KalmanWrapper():
             # if keypoint not found, then add it to tracked keypoint list
             if key not in self.tracked_keypoints.keys():
                 # print('keypoint {} newly founded, adding to list'.format(key))
-                self.tracked_keypoints.update( { key: TrackedKeypoint(measurement[key], key, 0, False)} )
+                self.tracked_keypoints.update( { key: TrackedKeypoint(measurement[key], key, 0, False, self.filter_setting)} )
 
         # perform predict and/or update for all tracked keypoint
         filtered_keypoint_dict = {}

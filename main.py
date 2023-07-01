@@ -1,13 +1,13 @@
 from Detection import Detection
 from Homography import Homography
 from preprocessing import red_filtering, segmentation_and_cropping, squaring
-from Filter import KalmanWrapper, draw_keypoint_on_image
+from Filter import KalmanWrapper
 import cv2
 import matplotlib.pyplot as plt
-
 import os
 import numpy as np
 import time
+import yaml
 
 # Movenet Keypoints Output
 #
@@ -24,6 +24,10 @@ import time
 # dst_point = {0: [676, 296], 1: [687, 282], 2: [661, 282], 3: [713, 288], 4: [638, 288], 5: [750, 367], 6: [607, 367],
 #              7: [780, 460], 8: [582, 460], 9: [789, 552], 10: [565, 552], 11: [728, 566], 12: [633, 566],
 #              13: [719, 690], 14: [622, 690], 15: [715, 800], 16: [616, 800]}
+
+with open('config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+
 frameacq = 0
 input_size = 192
 frames = 0
@@ -31,12 +35,12 @@ indi = 0
 movenet = Detection(input_size)
 dst = cv2.imread("resources/skeleton_2d.jpg")
 h = Homography()
-kalman_wrapper = KalmanWrapper(max_prediction=5)
+kalman_wrapper = KalmanWrapper(max_prediction=config['kalman_max_prediction'], setting=config['kalman'])
 kernel = np.array([[1, 2, 2, 1], [2, 6, 6, 2], [2, 6, 6, 2], [1, 2, 2, 1]])
 for video in os.listdir("video"):
     frames = 0
     print(video)
-    gesto = video.split("_")[0]
+    gesto = video.split("_")[1]
     webcam = cv2.VideoCapture("video/" + video)
     frame_count = int(webcam.get(cv2.CAP_PROP_FRAME_COUNT))
     print("Numero di frame nel video:", frame_count)
@@ -52,14 +56,12 @@ for video in os.listdir("video"):
         frames += 1
         if ret:
             image = cv2.flip(image, 1)
-            # risparmio secondi 
-            # full_mask = red_filtering(image)
-            # cropped_image = segmentation_and_cropping(image, full_mask)
-            # normalized_image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
-            # equalized_image = equalizing(normalized_image)
+            full_mask = red_filtering(image, setting=config['filter'])
+            cropped_image = segmentation_and_cropping(image, full_mask, setting=config['crop'])
             squared_image = squaring(image)
+            # squared_image = squaring(cropped_image) # TODO: fix
             if (squared_image.shape[0] != 0) and (squared_image.shape[1] != 0) and (squared_image.shape[2] != 0):
-                keypoint_dict, out_im = movenet.inference(squared_image, 0.35)
+                keypoint_dict, out_im = movenet.inference(squared_image, config['threshold'])
                 # -----------------------------KALMAN START HERE-----------------------------
                 measurement = {}
                 for key in keypoint_dict.keys():
@@ -69,8 +71,6 @@ for video in os.listdir("video"):
                     # adding measured keypoint coords to measurement dictionary
                     measurement.update({key: measure})
                 keypoint_dict = kalman_wrapper.update(measurement)
-                # cv2.imshow("More stable keypoint", draw_keypoint_on_image(image.copy(), keypoint_dict))
-                # cv2.waitKey(1)
                 if bool(keypoint_dict):
                     # -----------------------------HOMOGRAPHY START HERE-----------------------------
                     punti2d = [[676, 296], [750, 367], [607, 367], [728, 566], [633, 566]]
@@ -93,7 +93,7 @@ for video in os.listdir("video"):
                     else:
                         corr = h.normalize_points(punti2d, punti3d)
                         h._compute_view_based_homography(corr)
-                    if h.error < 0.07:
+                    if h.error < config['reprojection_error']:
                         try:
                             test = int(keypoint_dict[9][0]) + int(keypoint_dict[9][1]) + int(
                                 keypoint_dict[10][0]) + int(keypoint_dict[10][1])
@@ -170,7 +170,7 @@ for video in os.listdir("video"):
     plt.axis('off')
     plt.savefig('heatmap/' + gesto + "/" + str(indi) + '_all_total.jpg', bbox_inches='tight', pad_inches=0)
 
-    indi = indi + 1;
+    indi = indi + 1
 
     plt.close('all')
-    print((time.time() - inizio))
+    print('time passed: ', (time.time() - inizio))

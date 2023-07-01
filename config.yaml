@@ -1,0 +1,41 @@
+## Red Filter setting
+filter: 
+  # Lower boundary RED color range values | Hue (0 to 5)
+  lower1:
+    - 0 
+    - 100
+    - 100
+  upper1:
+    - 5
+    - 255
+    - 255
+
+  # Upper boundary RED color range values | Hue (174 to 179)
+  lower2:
+    - 174 
+    - 100
+    - 100
+  upper2:
+    - 179
+    - 255
+    - 255
+
+## Cropping setting
+crop:
+  extra_margin: 100
+
+## Kalman's Filters setting
+kalman_max_prediction: 5 # max number of prediction 
+kalman:
+  DT: 1         # time step
+  A_X: 0.1      # acceleration for x-coordinate [m/s^2]
+  A_Y: 0.1      # acceleration for y-coordinate [m/s^2]
+  SD_ACC: 0.1   # standard deviation for acceleration [m/s^2]
+  X_SD: 0.05    # standard deviation of measurement for x-coordinate [m]
+  Y_SD: 0.05    # standard deviation of measurement for y-coordinate [m]
+
+## NN's Threshold 
+threshold: 0.35
+
+## Homography reprojection error
+reprojection_error: 0.07
