@@ -1,5 +1,7 @@
 import numpy as np
 import cv2
+import math
+
 
 def red_filtering(image_to_filter, setting: dict):
     image_to_filter = cv2.cvtColor(image_to_filter, cv2.COLOR_BGR2HSV)
@@ -13,10 +15,11 @@ def red_filtering(image_to_filter, setting: dict):
     # result = cv2.bitwise_and(result, result, mask=full_mask)
     return full_mask
 
+
 def segmentation_and_cropping(image_to_crop, full_mask, setting: dict):
     # creo una ROI a partire dalla maschera 
     x, y, w, h = cv2.boundingRect(full_mask)
-    
+
     rectangle_image = image_to_crop.copy()
     # margine extra a sinistra e destra
     extra_margin = setting['extra_margin']
@@ -37,6 +40,7 @@ def segmentation_and_cropping(image_to_crop, full_mask, setting: dict):
     # riconverto l'immagine in colori umani
     return cropped_image
 
+
 def equalizing(image_to_equalize):
     equalized_image = image_to_equalize.copy()
     ycrcb_image = cv2.cvtColor(equalized_image, cv2.COLOR_BGR2YCR_CB)
@@ -46,10 +50,29 @@ def equalizing(image_to_equalize):
     cv2.cvtColor(ycrcb_image, cv2.COLOR_YCR_CB2BGR, equalized_image)
     return equalized_image
 
+
 def squaring(image_to_square):
-    # (H, W, D)
-    frame_width = int(image_to_square.shape[1])
-    frame_height = int(image_to_square.shape[0])
-    pixel_to_rect = int(abs(frame_width - frame_height) / 2)
-    squared_image = image_to_square[0:frame_height, pixel_to_rect:(frame_width - pixel_to_rect)]
-    return cv2.resize(squared_image,(192,192))
+    height, width, channels = image_to_square.shape
+    if width < height:
+        diff = height - width
+        margin = diff / 2
+        decimale, intera = math.modf(margin)
+        if decimale == 0.0:
+            image_to_square = image_to_square[int(margin):, :]
+            image_to_square = image_to_square[:int(-margin), :]
+        else:
+            image_to_square = image_to_square[int(margin + 1):, :]
+            image_to_square = image_to_square[:int(-margin), :]
+    elif width > height:
+        diff = width - height
+        margin = diff / 2
+        decimale, intera = math.modf(margin)
+        if decimale == 0.0:
+            image_to_square = image_to_square[:, int(margin):]
+            image_to_square = image_to_square[:, :int(-margin)]
+        else:
+            image_to_square = image_to_square[:, int(margin + 1):]
+            image_to_square = image_to_square[:, :int(-margin)]
+
+    squared_image = cv2.resize(image_to_square, (192, 192))
+    return squared_image
