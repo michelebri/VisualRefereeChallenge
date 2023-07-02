@@ -26,18 +26,19 @@ def segmentation_and_cropping(image_to_crop, full_mask):
     # no cropping su altezza
     y = 0
     h = image_to_crop.shape[0]
-    # creo un rettangolo a partire dalla ROI
-    # cv2.rectangle(rectangle_image, (x,y), (x+w,y+h), (255,0,0), 0)
     # croppo l'immagine usando la ROI
     if (x - extra_margin) < 0 and (x + w + extra_margin) < image_to_crop.shape[1]:
-        cropped_image = rectangle_image[y:y + h, 0:(x + w + extra_margin)]
+        cropped_image = rectangle_image[y: (y + h), 0: (x + w + extra_margin)]
+
     elif (x - extra_margin) > 0 and (x + w + extra_margin) > image_to_crop.shape[1]:
-        cropped_image = rectangle_image[y:y + h, (x - extra_margin):image_to_crop.shape[1]]
+        cropped_image = rectangle_image[y: (y + h), (x - extra_margin): image_to_crop.shape[1]]
+
     elif (x - extra_margin) < 0 and (x + w + extra_margin) > image_to_crop.shape[1]:
-        cropped_image = rectangle_image[y:y + h, 0:image_to_crop.shape[1]]
+        cropped_image = rectangle_image[y: (y + h), 0: image_to_crop.shape[1]]
+
     else:
-        cropped_image = rectangle_image[y:y + h, (x - extra_margin):(x + w + extra_margin)]
-    # riconverto l'immagine in colori umani
+        cropped_image = rectangle_image[y: (y + h), (x - extra_margin): (x + w + extra_margin)]
+
     return cropped_image
 
 
@@ -52,9 +53,26 @@ def equalizing(image_to_equalize):
 
 
 def squaring(image_to_square):
-    # (H, W, D)
-    frame_width = int(image_to_square.shape[1])
-    frame_height = int(image_to_square.shape[0])
-    pixel_to_rect = int(abs(frame_width - frame_height) / 2)
-    squared_image = image_to_square[0:frame_height, pixel_to_rect:(frame_width - pixel_to_rect)]
-    return squared_image
+    height, width, channels = image_to_square.shape
+    if width < height:
+        diff = height - width
+        margin = diff / 2
+        decimale, intera = math.modf(margin)
+        if decimale == 0.0:
+            image_to_square = image_to_square[int(margin):, :]
+            image_to_square = image_to_square[:int(-margin), :]
+        else:
+            image_to_square = image_to_square[int(margin + 1):, :]
+            image_to_square = image_to_square[:int(-margin), :]
+    elif width > height:
+        diff = width - height
+        margin = diff / 2
+        decimale, intera = math.modf(margin)
+        if decimale == 0.0:
+            image_to_square = image_to_square[:, int(margin):]
+            image_to_square = image_to_square[:, :int(-margin)]
+        else:
+            image_to_square = image_to_square[:, int(margin + 1):]
+            image_to_square = image_to_square[:, :int(-margin)]
+
+    return image_to_square

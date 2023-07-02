@@ -23,7 +23,7 @@ import time
 #              7: [780, 460], 8: [582, 460], 9: [789, 552], 10: [565, 552], 11: [728, 566], 12: [633, 566],
 #              13: [719, 690], 14: [622, 690], 15: [715, 800], 16: [616, 800]}
 
-webcam = cv2.VideoCapture(0)
+webcam = cv2.VideoCapture('./video/michael_cornerkick_red_team_converted.mp4')
 
 print("\n")
 stringa = "Please enter the acquisition number: "
@@ -50,26 +50,28 @@ gestures = ['kickin', 'goalkick', 'cornerkick', 'goal', 'pushingfreekick', 'full
 gesture_index = 0
 while ret:
     gesture_image = cv2.imread("./gestures/" + str(gesture_index) + ".jpg")
-    cv2.imshow("Gesture to imitate", gesture_image)
+    #cv2.imshow("Gesture to imitate", gesture_image)
 
     image = cv2.flip(image, 1)
+    cv2.imshow('Immagine mint', image)
     # -----------------------------PREPROCESSING START HERE-----------------------------
     # RED FILTERING
-    # full_mask = red_filtering(image)
+    full_mask = red_filtering(image)
     # SEGMENTATION E CROPPING
-    # cropped_image = segmentation_and_cropping(image, full_mask)
+    cropped_image = segmentation_and_cropping(image, full_mask)
+    cv2.imshow('Immagine croppata', cropped_image)
     # NORMALIZATION
-    normalized_image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+    #normalized_image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
     # EQUALIZATION
-    equalized_image = equalizing(normalized_image)
+    #equalized_image = equalizing(normalized_image)
     # SQUARING
-    squared_image = squaring(equalized_image)
+    squared_image = squaring(cropped_image)
     # ------------------------------PREPROCESSING END HERE------------------------------
 
     if (squared_image.shape[0] != 0) and (squared_image.shape[1] != 0) and (squared_image.shape[2] != 0):
         # L'algoritmo di cropping se riceve una immagine senza nemmeno un pixel rosso può croppare troppo e
         # annullare una dimensione
-
+        #cv2.imshow('Immagine quadrata', squared_image)
         image = cv2.resize(squared_image, (input_size, input_size))
         keypoint_dict, out_im = movenet.inference(image, 0.35)
         out_im = cv2.cvtColor(out_im, cv2.COLOR_BGR2RGB)
@@ -77,7 +79,7 @@ while ret:
 
         # -----------------------------KALMAN START HERE-----------------------------
         keypoint_dict = filter(keypoint_dict)
-        cv2.imshow("More stable keypoint", draw_keypoint_on_image(image.copy(), keypoint_dict))
+        #cv2.imshow("More stable keypoint", draw_keypoint_on_image(image.copy(), keypoint_dict))
         # ------------------------------KALMAN END HERE------------------------------
 
         if bool(keypoint_dict):
@@ -141,7 +143,7 @@ while ret:
                     result_overlay = hg.get_result_overlay()
                     #cv2.imshow("HeatMap_nuova acquisizione " + gesto, result_overlay)
 
-                    if time.time() - inizio > 10:
+                    if time.time() - inizio > 30:
                         result_overlay = cv2.resize(result_overlay, (600, 600))
                         cv2.imwrite("output_heatmap_generator/" + gesto + '_' + name + '_' + str(frameacq) + ".jpg", result_overlay)
                         hg.clean()
@@ -159,7 +161,6 @@ while ret:
             break
 
     skip = False
-    cv2.imshow('Immagine mint', image)
     ret, image = webcam.read()
 
 webcam.release()
