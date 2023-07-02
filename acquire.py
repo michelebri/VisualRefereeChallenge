@@ -4,21 +4,35 @@ import time
 
 durata_video = 15
 
-numero_video = 6
+numero_video = 7
 
 # Inizializza la webcam
 webcam = cv2.VideoCapture(0)
-titolo = "KickIn_M_"
+
+stringa = "Please enter your name: "
+name = input(stringa)
+print("\n")
 
 frame_width = int(webcam.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(webcam.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
+gestures = ['cornerkick', 'kickin', 'goalkick', 'goal', 'pushingfreekick', 'substitution', 'fulltime']
+gesture_index = 0
+
+print('you have 5 second, get ready')
+time.sleep(5)
+
 for i in range(numero_video):
+
+    print('gesture to imitate - ', gestures[gesture_index].upper())
+
     start_time = datetime.datetime.now()
 
-    writer = cv2.VideoWriter(titolo + str(i) + '.mp4', fourcc, 30.0, (frame_width, frame_height))
+    titolo = name + '_' + gestures[gesture_index] + '_'
+
+    writer = cv2.VideoWriter('acquired/' + titolo + str(i) + '.mp4', fourcc, 30.0, (frame_width, frame_height))
     while (datetime.datetime.now() - start_time).seconds < durata_video:
         ret, frame = webcam.read()
 
@@ -38,7 +52,8 @@ for i in range(numero_video):
 
     # Pausa di 3 secondi tra i video
     if i < numero_video - 1:
-        time.sleep(3)
+        time.sleep(5)
+    gesture_index += 1
 
 webcam.release()
 writer.release()
