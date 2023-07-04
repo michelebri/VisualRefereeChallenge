@@ -36,9 +36,67 @@ first_iteration_indicator = 1
 hg = None
 dst = cv2.imread("model/skeleton_2d.jpg")
 h = Homography()
-skip = False
-kalman_wrapper = KalmanWrapper(max_prediction=5) 
-while ret:
+kalman_wrapper = KalmanWrapper(max_prediction=config['kalman_max_prediction'], setting=config['kalman'])
+kernel = np.array([[1, 2, 2, 1], [2, 6, 6, 2], [2, 6, 6, 2], [1, 2, 2, 1]])
+for video in os.listdir("video"):
+    frames = 0
+    print(video)
+    gesto = video.split("_")[1]
+    webcam = cv2.VideoCapture("video/" + video)
+    frame_count = int(webcam.get(cv2.CAP_PROP_FRAME_COUNT))
+    print("Numero di frame nel video:", frame_count)
+    first_iteration_indicator = 1
+    skip = False
+    inizio = time.time()
+    ret, image = webcam.read()
+    heatmapmod = np.zeros((dst.shape[0], dst.shape[1]))
+    heatmapmod3 = np.zeros((dst.shape[0], dst.shape[1]))
+    heatmapmod5 = np.zeros((dst.shape[0], dst.shape[1]))
+    while ret:
+        ret, image = webcam.read()
+        frames += 1
+        if ret:
+            image = cv2.flip(image, 1)
+
+            # full_mask = red_filtering(image, setting=config['filter'])
+            # cropped_image = segmentation_and_cropping(image, full_mask, setting=config['crop'])
+
+            squared_image = squaring(image)
+            if (squared_image.shape[0] != 0) and (squared_image.shape[1] != 0) and (squared_image.shape[2] != 0):
+                keypoint_dict, out_im = movenet.inference(squared_image, config['threshold'])
+
+                # -----------------------------POST-PROCESSING START HERE-----------------------------
+                full_mask = red_filtering(out_im, setting=config['filter'])
+                if full_mask.any():
+                    cropped_image = segmentation_and_cropping(out_im, keypoint_dict, setting=config['crop'])
+                else:
+                    # crea rettangolo NERO e ripeti inferenza
+                    pass
+                # -----------------------------POST-PROCESSING  END  HERE-----------------------------
+                measurement = {}
+                for key in keypoint_dict.keys():
+                    # extract current measured coords for keypoint labeled 'key'
+                    measure = np.array([[keypoint_dict[key][0]], [keypoint_dict[key][1]]])
+                    # print("measured coordinate={} for keypoint={}".format(measure, key))
+                    # adding measured keypoint coords to measurement dictionary
+                    measurement.update({key: measure})
+                keypoint_dict = kalman_wrapper.update(measurement)
+                if bool(keypoint_dict):
+                    # -----------------------------HOMOGRAPHY START HERE-----------------------------
+                    punti2d = [[676, 296], [750, 367], [607, 367], [728, 566], [633, 566]]
+                    punti3d = []
+                    index_list = [0, 5, 6, 11, 12]
+                    count = 0
+                    index_to_remove = []
+                    for i in index_list:
+                        try:
+                            punti3d.append([int(keypoint_dict[i][0]), int(keypoint_dict[i][1])])
+                        except:
+                            index_to_remove.append(count)
+                        finally:
+                            count = count + 1
+                    for index in sorted(index_to_remove, reverse=True):
+                        del punti2d[index]
 
 
     image = cv2.flip(image, 1)
