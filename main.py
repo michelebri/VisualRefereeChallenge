@@ -59,7 +59,6 @@ for video in os.listdir("video"):
             full_mask = red_filtering(image, setting=config['filter'])
             cropped_image = segmentation_and_cropping(image, full_mask, setting=config['crop'])
             squared_image = squaring(image)
-            # squared_image = squaring(cropped_image) # TODO: fix
             if (squared_image.shape[0] != 0) and (squared_image.shape[1] != 0) and (squared_image.shape[2] != 0):
                 keypoint_dict, out_im = movenet.inference(squared_image, config['threshold'])
                 # -----------------------------KALMAN START HERE-----------------------------

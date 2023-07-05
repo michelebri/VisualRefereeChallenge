@@ -1,0 +1,25 @@
+
+## Cropping setting
+crop:
+  width_margin: 25
+  height_margin: 20
+
+## Obstruction setting
+obstruct:
+  margin: 50
+
+## Kalman's Filters setting
+kalman_max_prediction: 5 # max number of prediction 
+kalman:
+  DT: 1         # time step
+  A_X: 0.1      # acceleration for x-coordinate [m/s^2]
+  A_Y: 0.1      # acceleration for y-coordinate [m/s^2]
+  SD_ACC: 0.1   # standard deviation for acceleration [m/s^2]
+  X_SD: 0.05    # standard deviation of measurement for x-coordinate [m]
+  Y_SD: 0.05    # standard deviation of measurement for y-coordinate [m]
+
+## NN's Threshold 
+threshold: 0.35
+
+## Homography reprojection error
+reprojection_error: 0.07
