@@ -1,5 +1,5 @@
 from Detection import Detection
-from preprocessing import red_filtering, segmentation_and_cropping, squaring
+from postprocessing import red_filtering, segmentation_and_cropping, squaring, obstruct_fake_referee
 import cv2
 import yaml
 
@@ -27,7 +27,7 @@ input_size = 192
 frames = 0
 indi = 0
 movenet = Detection(input_size)
-dst = cv2.imread("resources/skeleton_2d.jpg")
+# dst = cv2.imread("resources/skeleton_2d.jpg")
 
 # video = cv2.VideoCapture("video/michael_corner_kick.avi")
 # video = cv2.VideoCapture("video/michael_full_time.avi")
@@ -56,19 +56,23 @@ while ret:
         cv2.imshow('squared image', squared_image)
 
         if (squared_image.shape[0] != 0) and (squared_image.shape[1] != 0) and (squared_image.shape[2] != 0):
+
             keypoint_dict, out_im = movenet.inference(squared_image, config['threshold'])
             cv2.imshow('out image', out_im)
             
-            full_mask = red_filtering(squared_image, setting=config['filter'])
-            cv2.imshow('masked image', full_mask)
+            cropped_image = segmentation_and_cropping(squared_image, keypoint_dict, setting=config['crop'])
+            cv2.imshow('cropped image', cropped_image)
             
-            if full_mask.any():
-                cropped_image = segmentation_and_cropping(squared_image, keypoint_dict, setting=config['crop'])
-                if cropped_image != []:
-                    cv2.imshow('cropped image', cropped_image)
-            else:
-                # crea rettangolo NERO sul frame e ripeti inferenza
+            full_mask = red_filtering(cropped_image, setting=config['filter'])
+            cv2.imshow('masked image', full_mask)
+
+            while full_mask.any():
+                # CONTINUE with Homography, etc...
                 pass
+            else:
+                obstruct_frame = obstruct_fake_referee(squared_image, keypoint_dict, setting=config['obstruct'])
+                cv2.imshow('obstruct image', obstruct_frame)
+                # RIPETI Detection/Inference
 
         key=cv2.waitKey(1) & 0xFF
         if key==ord("q"):

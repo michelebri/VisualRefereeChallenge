@@ -95,7 +95,7 @@ def segmentation_and_cropping(image_to_crop, keypoint_dict, setting: dict):
         test = int(keypoint_dict[9][0]) + int(keypoint_dict[9][1]) + int(keypoint_dict[10][0]) + int(keypoint_dict[10][1]) \
             + int(keypoint_dict[11][0]) + int(keypoint_dict[11][1]) + int(keypoint_dict[12][0]) + int(keypoint_dict[12][1]) 
     except:
-        return []
+        return image_to_crop
 
     # estraggo le coordinate dei polsi...
     left_wrist = [int(keypoint_dict[9][0]), int(keypoint_dict[9][1])]
@@ -178,3 +178,11 @@ def squaring(image_to_square):
     pixel_to_rect = int(abs(frame_width - frame_height) / 2)
     squared_image = image_to_square[0:frame_height, pixel_to_rect:(frame_width - pixel_to_rect)]
     return cv2.resize(squared_image,(192, 192))
+
+def obstruct_fake_referee(frame, keypoint_dict):
+    left_wrist_x = int(keypoint_dict[9][0])
+    right_wrist_x = int(keypoint_dict[10][0])
+
+    left_wrist_y = int(keypoint_dict[9][1])
+    right_wrist_y = int(keypoint_dict[10][1])
+    return frame

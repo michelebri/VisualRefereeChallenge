@@ -29,6 +29,10 @@ crop:
   width_margin: 25
   height_margin: 20
 
+## Obstruction setting
+obstruct:
+  margin: 50
+
 ## Kalman's Filters setting
 kalman_max_prediction: 5 # max number of prediction 
 kalman:
